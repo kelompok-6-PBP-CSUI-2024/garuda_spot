@@ -31,7 +31,9 @@ PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garuda_spot.pbp.cs.ui.ac.id"]
+# temporary fixes
+# TODO actually fix this
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","*"]
 
 
 # Application definition
