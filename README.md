@@ -52,5 +52,5 @@ GarudaSpot adalah aplikasi fansite all-in-one untuk pecinta Timnas Indonesia. Sa
 ---
 
 ## vi. Tautan Deployment PWS & Link Desain
-- *PWS:* [GarudaSpot Deployment](https://pbp.cs.ui.ac.id/hasanul.muttaqin/garuda_spot)  
+- *PWS:* [GarudaSpot Deployment](https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id)  
 - *Figma:* [Link Desain](https://www.figma.com/team_invite/redeem/BtdWAVqki1i8x1JrcncMpQ)
