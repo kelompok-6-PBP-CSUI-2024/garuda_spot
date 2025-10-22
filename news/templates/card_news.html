@@ -1,0 +1,34 @@
+{% extends 'base.html' %}
+{% block content %}
+<article class="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+  <div class="p-5">
+    <div class="text-sm text-gray-500 mb-2">
+      <span class="px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200">{{ news.category }}</span>
+      <span class="mx-2">•</span>
+      <time>{{ news.publish_date }}</time>
+    </div>
+
+    <h3 class="text-lg font-semibold text-gray-900 mb-3 leading-tight">
+      <a href="{% url 'news:show_news' news.id %}" class="hover:text-red-600 transition-colors">
+        {{ news.title }}
+      </a>
+    </h3>
+
+    <p class="text-gray-600 text-sm leading-relaxed mb-4">
+      {{ news.content|truncatewords:26 }}
+    </p>
+
+    <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
+      <a href="{% url 'news:show_news' news.id %}" class="text-red-600 hover:text-red-700 font-medium text-sm">
+        Read more →
+      </a>
+      {% if user.is_authenticated and news.user == user %}
+      <div class="flex space-x-3">
+        <a href="{% url 'news:edit_news' news.id %}" class="text-gray-600 hover:text-gray-700 text-sm">Edit</a>
+        <a href="{% url 'news:delete_news' news.id %}" class="text-red-600 hover:text-red-700 text-sm">Delete</a>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+</article>
+{% endblock %}
