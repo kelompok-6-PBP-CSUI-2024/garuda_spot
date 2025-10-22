@@ -9,10 +9,6 @@
   </div>
 </header>
 
-<main class="pt-14 pb-16">
-  {% block content %}{% endblock %}
-</main>
-
 <nav class="fixed bottom-0 inset-x-0 z-50 bg-red-700 text-white border-t border-red-800">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
     <div class="h-16 flex items-center justify-between">
@@ -25,14 +21,17 @@
       <ul class="flex items-center text-[13px] sm:text-[14px] font-medium gap-2 sm:gap-3">
         <li><a class="nav-bottom-link" href="{% url 'news:show_main' %}">News</a></li>
         <li class="sep">|</li>
-        
         <li><a class="nav-bottom-link" href="">Player</a></li>
+
         <li class="sep">|</li>
         <li><a class="nav-bottom-link" href="">Forum</a></li>
+
         <li class="sep">|</li>
         <li><a class="nav-bottom-link" href="">Ticket</a></li>
+
         <li class="sep">|</li>
-        <li><a class="nav-bottom-link" href="">Merch</a></li>
+        <li><a class="nav-bottom-link" href="{% url 'merch:show_merch' %}">Merch</a></li>
+
         <li class="sep">|</li>
         <li><a class="nav-bottom-link" href="">Schedule</a></li>
       </ul>
