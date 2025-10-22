@@ -2,6 +2,43 @@
 {% load static %}
 
 {% block content %}
+
+<div class="flex items-center justify-between mb-4">
+  <div>
+    {% if request.user.is_authenticated and request.user.is_admin %}
+      <a href="{% url 'news:create_news' %}"
+         class="inline-block px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+        Create News
+      </a>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if request.user.is_authenticated %}
+      <form method="post" action="{% url 'accounts:logout' %}" class="inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">
+          Logout {{ request.user.username }}
+        </button>
+      </form>
+    {% else %}
+      <a href="{% url 'accounts:login' %}"
+         class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+        Login
+      </a>
+      <a href="{% url 'accounts:register' %}"
+         class="ml-2 px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700">
+        Register
+      </a>
+    {% endif %}
+  </div>
+</div>
+
+{% if request.user.is_authenticated and request.user.is_admin %}
+  <a href="{% url 'news:create_news' %}">Create News</a>
+{% endif %}
+
 <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
   <p class="text-gray-600">Loading news…</p>
 </div>
@@ -14,12 +51,12 @@
   <p class="text-gray-600">No news yet.</p>
 </div>
 
-<div id="grid" style="display:none"></div>
+<div id="grid" style="display:none">
+</div>
 
 <script>
   const NEWS_API_ENDPOINT = "{% url 'news:show_json' %}";
 
-  // DOM
   const loadingSpinner = document.getElementById('loading');
   const errorMessage = document.getElementById('error');
   const emptyStateDisplay = document.getElementById('empty');

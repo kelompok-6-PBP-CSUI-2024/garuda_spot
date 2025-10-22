@@ -1,0 +1,9 @@
+{% extends 'base.html' %}
+{% block meta %}<title>Register</title>{% endblock %}
+{% block content %}
+<form method="post">{% csrf_token %}
+  {{ form.as_p }}
+  <button type="submit">Create account</button>
+</form>
+<a href="{% url 'accounts:login' %}">Back to login</a>
+{% endblock %}

@@ -22,12 +22,11 @@
       <a href="{% url 'news:show_news' news.id %}" class="text-red-600 hover:text-red-700 font-medium text-sm">
         Read more →
       </a>
-      {% if user.is_authenticated and news.user == user %}
-      <div class="flex space-x-3">
-        <a href="{% url 'news:edit_news' news.id %}" class="text-gray-600 hover:text-gray-700 text-sm">Edit</a>
-        <a href="{% url 'news:delete_news' news.id %}" class="text-red-600 hover:text-red-700 text-sm">Delete</a>
-      </div>
-      {% endif %}
+    {% if request.user.is_authenticated and request.user.is_admin %}
+    <a href="{% url 'news:edit_news' news.id %}">Edit</a>
+    <a href="{% url 'news:delete_news' news.id %}">Delete</a>
+    {% endif %}
+
     </div>
   </div>
 </article>
