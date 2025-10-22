@@ -32,12 +32,9 @@ PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 DEBUG = True
 
 # temporary fixes
-# TODO actually fix this
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","*"]
-
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"]
 
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
