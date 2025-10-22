@@ -42,8 +42,15 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'news'
+    'news',
+    'accounts'
 ]
+
+LOGIN_URL = 'accounts:login'
+AUTH_USER_MODEL = "accounts.User"
+LOGIN_REDIRECT_URL = 'news:show_main'
+LOGOUT_REDIRECT_URL = 'news:show_main'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
