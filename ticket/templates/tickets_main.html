@@ -1,0 +1,123 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+
+<div class="flex items-center justify-between mb-4">
+  <div>
+    {% if request.user.is_authenticated and request.user.is_admin %}
+      <a href="#"
+         class="inline-block px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+        Create Ticket
+      </a>
+    {% endif %}
+  </div>
+
+  <div>
+    {% if request.user.is_authenticated %}
+      <form method="post" action="{% url 'accounts:logout' %}" class="inline">
+        {% csrf_token %}
+        <button type="submit"
+                class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">
+          Logout {{ request.user.username }}
+        </button>
+      </form>
+    {% else %}
+      <a href="{% url 'accounts:login' %}"
+         class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+        Login
+      </a>
+      <a href="{% url 'accounts:register' %}"
+         class="ml-2 px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700">
+        Register
+      </a>
+    {% endif %}
+  </div>
+  </div>
+
+<div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
+  <p class="text-gray-600">Loading tickets…</p>
+  </div>
+
+<div id="error" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
+  <p class="text-red-600">Failed to load tickets.</p>
+  </div>
+
+<div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
+  <p class="text-gray-600">No tickets yet.</p>
+  </div>
+
+<div id="grid" style="display:none"></div>
+
+<script>
+  const TICKETS_API_ENDPOINT = "{% url 'ticket:show_json' %}";
+
+  const loadingSpinner = document.getElementById('loading');
+  const errorMessage = document.getElementById('error');
+  const emptyStateDisplay = document.getElementById('empty');
+  const grid = document.getElementById('grid');
+
+  function setVis(el, show) { if (el) el.style.display = show ? '' : 'none'; }
+
+  function displaySections({ showLoading=false, showError=false, showEmpty=false, showGrid=false }) {
+    setVis(loadingSpinner, showLoading);
+    setVis(errorMessage, showError);
+    setVis(emptyStateDisplay, showEmpty);
+    setVis(grid, showGrid);
+    if (showGrid && grid) grid.className = 'grid grid-cols-1 gap-6';
+  }
+
+  function buildMatchCard(item) {
+    const el = document.createElement('article');
+    el.className = 'bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden';
+
+    const wrapper = document.createElement('div');
+    wrapper.className = 'p-5';
+
+    const h3 = document.createElement('h3');
+    h3.className = 'text-lg font-semibold text-gray-900 mb-2';
+    h3.textContent = `${item.team1 || ''} vs ${item.team2 || ''}`;
+
+    const p = document.createElement('p');
+    p.className = 'text-gray-600 text-sm mb-2';
+    p.textContent = item.date || '';
+
+    const links = document.createElement('div');
+    links.className = 'text-sm text-gray-700';
+    (item.links || []).forEach(l => {
+      const a = document.createElement('a');
+      a.href = l.vendor_link;
+      a.className = 'block text-red-600 hover:text-red-700';
+      a.textContent = `${l.vendor} — ${l.price}`;
+      links.appendChild(a);
+    });
+
+    wrapper.append(h3, p, links);
+    el.appendChild(wrapper);
+    return el;
+  }
+
+  function render(items) {
+    grid.innerHTML = '';
+    items.forEach(it => grid.appendChild(buildMatchCard(it)));
+  }
+
+  async function fetchTickets() {
+    try {
+      displaySections({ showLoading: true });
+      const res = await fetch(TICKETS_API_ENDPOINT, { headers: { Accept: 'application/json' }});
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const data = await res.json();
+      const items = Array.isArray(data) ? data : [];
+      if (items.length === 0) displaySections({ showEmpty: true });
+      else { render(items); displaySections({ showGrid: true }); }
+    } catch (e) {
+      console.error('Ticket fetch error:', e);
+      displaySections({ showError: true });
+    }
+  }
+
+  document.addEventListener('DOMContentLoaded', fetchTickets);
+  </script>
+{% endblock %}
+
