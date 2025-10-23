@@ -5,6 +5,7 @@ from django.contrib.auth.decorators import login_required
 from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
 from django.utils.html import strip_tags
+from django.db.models import F
 
 
 ALLOWED_CATEGORIES = {"cap", "hoodie", "jacket", "jersey", "keychain", "scarf", "others"}
@@ -20,14 +21,24 @@ def to_int(val, default=0):
 @login_required
 def show_merch(request):
     filter_type = request.GET.get("filter", "all")
+    sort = request.GET.get("sort", "recent")
     all_merch = Merch.objects.all()
     if filter_type in ALLOWED_CATEGORIES:
         all_merch = all_merch.filter(category=filter_type)
+
+    order_map = {
+        "recent": "-id",
+        "price_asc": "price",
+        "price_desc": "-price",
+        "popular": "-view_count",
+    }
+    all_merch = all_merch.order_by(order_map.get(sort, "-id"))
 
     context = {
         "name": request.user.username,
         "list_merch": all_merch,
     }
+    
     return render(request, "merch_main.html", context)
 
 @login_required
@@ -130,6 +141,8 @@ def detail(request, id):
     context = {
         'merch': merch
     }
+    Merch.objects.filter(pk=id).update(view_count=F('view_count') + 1)
+    merch.refresh_from_db(fields=['view_count'])
 
     return render(request, "merch_detail.html", context)
 

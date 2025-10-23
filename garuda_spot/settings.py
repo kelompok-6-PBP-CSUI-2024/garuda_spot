@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'merch',
     'accounts',
     'squad',
+    'ticket',
+    'forum'
 ]
 
 LOGIN_URL = 'accounts:login'
