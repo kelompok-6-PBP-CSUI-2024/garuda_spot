@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="relative w-screen mx-[calc(50%-50vw)] bg-white">
+
+  <!-- baris kembali -->
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6">
+    <a href="#" onclick="history.back()" class="text-red-700 hover:text-red-800 font-semibold">Return</a>
+  </div>
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+    <!-- Grid responsif: gambar dulu di mobile, teks dulu di desktop -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+
+      <!-- KANAN (di mobile tampil dulu): Foto + bg gradient -->
+      <div class="order-1 lg:order-2">
+        <figure class="relative w-full aspect-[4/3] md:aspect-[3/2]">
+          <!-- panel gradient -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            <div class="w-[90%] md:w-[84%] h-[88%] rounded-3xl
+                        bg-gradient-to-b from-red-500/20 via-red-600/30 to-red-700/50
+                        shadow-[0_20px_60px_rgba(225,29,42,0.25)]">
+            </div>
+          </div>
+
+          <!-- foto -->
+          <div class="absolute inset-0 flex items-center justify-center">
+            {% if p.photo %}
+              <img src="{{ p.photo.url }}" alt="{{ p.name }}"
+                   class="relative z-10 max-h-[70%] md:max-h-[80%] w-auto object-contain" />
+            {% elif p.photo_url %}
+              <img src="{{ p.photo_url }}" alt="{{ p.name }}"
+                   class="relative z-10 max-h-[70%] md:max-h-[80%] w-auto object-contain" />
+            {% else %}
+              <img src="{% static 'squad/placeholder.png' %}" alt="{{ p.name }}"
+                   class="relative z-10 max-h-[70%] md:max-h-[80%] w-auto object-contain" />
+            {% endif %}
+          </div>
+        </figure>
+      </div>
+
+      <!-- KIRI (di mobile tampil kedua): Nama + data -->
+      <div class="order-2 lg:order-1 pt-2">
+        <!-- badge -->
+        <span class="inline-block bg-red-600 text-white text-[11px] font-extrabold px-3 py-1 rounded-md uppercase tracking-wider">
+          Profile
+        </span>
+
+        <!-- Nama besar -->
+        <h1 class="mt-4 sm:mt-6 leading-[0.95] font-black uppercase text-red-600
+                   text-4xl sm:text-5xl md:text-6xl lg:text-7xl break-words">
+          {{ p.fname|default:p.name|upper }}{% if p.lname %}<br>{{ p.lname|upper }}{% endif %}
+        </h1>
+
+        <!-- grid info -->
+        <div class="mt-8 md:mt-10 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6 text-gray-700">
+          <div>
+            <div class="text-xs uppercase tracking-widest text-gray-400 font-bold">Position</div>
+            <div class="mt-1 font-extrabold text-red-900">
+              {{ p.positions_display|default:p.position1|default:"-" }}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-widest text-gray-400 font-bold">Date of Birth</div>
+            <div class="mt-1 font-extrabold text-red-900">
+              {% if p.birth_date %}{{ p.birth_date|date:"M d Y"|upper }}{% else %}-{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-widest text-gray-400 font-bold">Height</div>
+            <div class="mt-1 font-extrabold text-red-900">
+              {% if p.height_cm %}{{ p.height_cm }} cm{% else %}-{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="text-xs uppercase tracking-widest text-gray-400 font-bold">Club</div>
+            <div class="mt-1 font-extrabold text-red-900">{{ p.club|default:"-" }}</div>
+          </div>
+        </div>
+
+        <!-- stats -->
+        <div class="mt-10 md:mt-12 grid grid-cols-3 gap-4 sm:gap-6">
+          <div class="text-center">
+            <div class="text-[11px] uppercase tracking-widest text-gray-400 font-bold">Appearances</div>
+            <div class="text-3xl sm:text-4xl font-black text-red-600">{{ p.caps|default:"0" }}</div>
+          </div>
+          <div class="text-center">
+            <div class="text-[11px] uppercase tracking-widest text-gray-400 font-bold">Goals</div>
+            <div class="text-3xl sm:text-4xl font-black text-red-600">{{ p.goals|default:"0" }}</div>
+          </div>
+          <div class="text-center">
+            <div class="text-[11px] uppercase tracking-widest text-gray-400 font-bold">Assists</div>
+            <div class="text-3xl sm:text-4xl font-black text-red-600">{{ p.assists|default:"0" }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

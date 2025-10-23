@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Squad – GarudaSpot{% endblock %}
+
+{% block head_extra %}
+  <link rel="stylesheet" href="{% static 'squad/squad.css' %}">
+{% endblock %}
+
+{% block content %}
+
+{% static 'squad/hero.jpg' as hero_fallback %}
+
+{% static 'squad/hero.jpg' as hero_fallback %}
+
+
+
+<section class="relative w-screen mx-[calc(50%-50vw)] overflow-hidden">
+  <img
+    src="{{ hero_url|default:hero_fallback }}"
+    alt="Garuda Squad"
+    class="w-full h-[60vh] md:h-[68vh] object-cover" />
+
+  <!-- overlay gradasi -->
+  <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-red-900/60 via-blue-800/10 to-transparent"></div>
+
+  <!-- title -->
+  <div class="absolute inset-0 flex items-end justify-center pb-12">
+    <h1 class="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight text-white drop-shadow-[0_8px_20px_rgba(0,0,0,.45)]">
+      SQUAD GARUDA
+    </h1>
+  </div>
+</section>
+
+
+<div class="h-10"></div>
+
+<nav id="role-filter" class="relative z-20 flex flex-wrap items-center justify-center gap-3">
+  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+          data-role="GOALKEEPER" onclick="filterByRole(this)">GOALKEEPER</button>
+  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+          data-role="DEFENDER" onclick="filterByRole(this)">DEFENDER</button>
+  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+          data-role="MIDFIELDER" onclick="filterByRole(this)">MIDFIELDER</button>
+  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+          data-role="ATTACKER" onclick="filterByRole(this)">ATTACKER</button>
+</nav>
+
+  {% if user.is_authenticated and user.is_admin %}
+  <div class="flex justify-center relative z-20">
+<button id="btn-add"
+        data-form-url="{% url 'squad:player_form' %}"
+        data-url="{% url 'squad:player_create' %}"
+        class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-semibold"
+        onclick="openCreateModal(this)">
+  + Tambah Pemain
+</button>
+  </div>
+  {% endif %}
+<section id="groups" class="max-w-7xl mx-auto px-4 md:px-6 space-y-10 mt-8">
+    <section class="role-group" data-role="GOALKEEPER">
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">GOALKEEPER</h3>
+    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for p in players %}{% if p.role_tag == 'GOALKEEPER' %}
+        {% include "squad/_player_card.html" with p=p %}
+      {% endif %}{% endfor %}
+    </div>
+  </section>
+
+  <section class="role-group" data-role="DEFENDER">
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">DEFENDER</h3>
+    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for p in players %}{% if p.role_tag == 'DEFENDER' %}
+        {% include "squad/_player_card.html" with p=p %}
+      {% endif %}{% endfor %}
+    </div>
+  </section>
+
+  <section class="role-group" data-role="MIDFIELDER">
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">MIDFIELDER</h3>
+    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for p in players %}{% if p.role_tag == 'MIDFIELDER' %}
+        {% include "squad/_player_card.html" with p=p %}
+      {% endif %}{% endfor %}
+    </div>
+  </section>
+
+  <section class="role-group" data-role="ATTACKER">
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">ATTACKER</h3>
+    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+      {% for p in players %}{% if p.role_tag == 'ATTACKER' %}
+        {% include "squad/_player_card.html" with p=p %}
+      {% endif %}{% endfor %}
+    </div>
+  </section>
+</section>
+
+<!-- Modal untuk form AJAX -->
+<div id="modal" class="fixed inset-0 hidden z-50">
+  <div class="absolute inset-0 bg-black/60" data-close></div>
+  <div class="relative max-w-2xl mx-auto bg-white rounded-2xl shadow-xl mt-16 p-6">
+    <div class="flex justify-between items-center mb-3">
+      <h2 class="text-xl font-bold">Form Pemain</h2>
+      <button type="button" data-close class="px-3 py-1 rounded-md border">×</button>
+    </div>
+    <div id="modal-body"></div>
+  </div>
+</div>
+
+{% endblock content %}
+
+{% block body_end %}
+  <script src="{% static 'squad/squad.js' %}"></script>
+{% endblock %}
