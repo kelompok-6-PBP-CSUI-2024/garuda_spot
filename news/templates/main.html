@@ -37,36 +37,11 @@
 </div>
 
 <div id="grid" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-6">
-  {% for news in news_list %}
-    <article class="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
-      <div class="p-5">
-        <div class="text-sm text-gray-500 mb-2">
-          <span class="px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200">{{ news.category }}</span>
-          <span class="mx-2">•</span>
-          <time>{{ news.publish_date }}</time>
-        </div>
-        <h3 class="text-lg font-semibold text-gray-900 mb-3 leading-tight">
-          <a href="{% url 'news:show_news' news.id %}" class="hover:text-red-600 transition-colors">{{ news.title }}</a>
-        </h3>
-        <p class="text-gray-600 text-sm leading-relaxed mb-4">{{ news.content|truncatewords:26 }}</p>
-        <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
-          <a href="{% url 'news:show_news' news.id %}" class="text-red-600 hover:text-red-700 font-medium text-sm">Read more →</a>
-          {% if request.user.is_authenticated and request.user.is_admin %}
-            <button type="button"
-                    data-delete-id="{{ news.id }}"
-                    class="px-2 py-1 text-sm rounded border border-red-300 text-red-700 hover:bg-red-50">
-              Delete
-            </button>
-          {% endif %}
-        </div>
-      </div>
-    </article>
-  {% empty %}
-    <div class="col-span-1">
-      <div class="bg-white rounded-lg border border-gray-200 p-12 text-center">No news yet.</div>
-    </div>
-  {% endfor %}
+
 </div>
+
+<div id="sentinel" class="h-10"></div>
+
 
 {% if request.user.is_authenticated and request.user.is_admin %}
 <div id="add-news-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center">
@@ -122,12 +97,18 @@
   const errorMessage = document.getElementById('error');
   const emptyStateDisplay = document.getElementById('empty');
   const newsGridContainer = document.getElementById('grid');
+  const sentinel = document.getElementById('sentinel');
 
   const modal = document.getElementById('add-news-modal');
   const openBtn = document.getElementById('open-add-news');
   const form = document.getElementById('add-news-form');
   const submitBtn = document.getElementById('add-news-submit');
   const errText = document.getElementById('add-news-error');
+
+  let page = 1;
+  const PAGE_SIZE = 20;
+  let isLoading = false;
+  let noMore = false;
 
   function setVis(el, show) { if (el) el.classList[show ? 'remove' : 'add']('hidden'); }
   function displayPageSection({ showLoading=false, showError=false, showEmpty=false, showGrid=true }) {
@@ -181,27 +162,46 @@
     return article;
   }
 
-  function renderAllNewsCards(items) {
-    newsGridContainer.innerHTML = '';
+  function appendNews(items) {
     items.forEach(item => newsGridContainer.appendChild(buildNewsCardElement(item)));
   }
 
-  async function fetchNewsFromServer() {
+  async function fetchPage(p) {
+    isLoading = true;
+    const qs = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) }).toString();
     try {
-      displayPageSection({ showLoading: true, showGrid: false });
-      const res = await fetch(NEWS_API_ENDPOINT, { headers: { Accept: 'application/json' }});
+      if (p === 1) displayPageSection({ showLoading: true, showGrid: false });
+      const res = await fetch(`${NEWS_API_ENDPOINT}?${qs}`, {
+        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+      });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const items = await res.json();
-      if (!Array.isArray(items) || items.length === 0) {
+      const { items, has_next, total } = await res.json();
+
+      if (p === 1 && (!Array.isArray(items) || items.length === 0)) {
         displayPageSection({ showEmpty: true, showGrid: false });
-      } else {
-        renderAllNewsCards(items);
-        displayPageSection({ showGrid: true });
+        noMore = true;
+        return;
       }
+
+      appendNews(items);
+      displayPageSection({ showGrid: true });
+      noMore = !has_next;
+      if (!has_next && sentinel) observer.unobserve(sentinel);
     } catch (e) {
-      displayPageSection({ showError: true, showGrid: false });
+      if (p === 1) displayPageSection({ showError: true, showGrid: false });
+      console.error(e);
+    } finally {
+      isLoading = false;
     }
   }
+
+  const observer = new IntersectionObserver((entries) => {
+    const entry = entries[0];
+    if (entry.isIntersecting && !isLoading && !noMore) {
+      page += 1;
+      fetchPage(page);
+    }
+  }, { rootMargin: '400px' });
 
   if (openBtn && modal && form) {
     openBtn.addEventListener('click', openModal);
@@ -224,7 +224,10 @@
           throw new Error(data.error || `HTTP ${res.status}`);
         }
         closeModal();
-        await fetchNewsFromServer();
+        page = 1; noMore = false;
+        newsGridContainer.innerHTML = '';
+        observer.observe(sentinel);
+        await fetchPage(page);
       } catch (err) {
         errText.textContent = err.message || 'Failed to create news';
         errText.classList.remove('hidden');
@@ -246,13 +249,20 @@
         headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      await fetchNewsFromServer();
+      btn.closest('article')?.remove();
+      if (!newsGridContainer.children.length && !noMore && !isLoading) {
+        await fetchPage(page);
+      }
     } catch {
       btn.disabled = false;
       alert('Delete failed');
     }
   });
 
-  document.addEventListener('DOMContentLoaded', fetchNewsFromServer);
+  document.addEventListener('DOMContentLoaded', async () => {
+    await fetchPage(page);
+    if (sentinel) observer.observe(sentinel);
+  });
 </script>
+
 {% endblock %}
