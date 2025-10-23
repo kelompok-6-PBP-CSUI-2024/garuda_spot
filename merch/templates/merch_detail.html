@@ -1,0 +1,287 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="bg-white w-full min-h-screen mt-14 mb-16">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+    <!-- Back -->
+    <a href="{% url 'merch:show_merch' %}"
+       class="inline-flex items-center gap-2 text-[#b91c1c] hover:underline mb-4">
+      <span class="text-xl">←</span><span>Back</span>
+    </a>
+
+    <!-- Card -->
+    <div class="rounded-2xl border-2 border-[#e11d2a]/70 shadow-[0_0_0_3px_rgba(225,29,42,0.08)] bg-white p-6 sm:p-8 overflow-hidden">
+      <div class="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 items-start">
+
+        <!-- Thumbnail -->
+        <div class="mx-auto md:mx-0 w-[220px] sm:w-[240px] aspect-square rounded-xl overflow-hidden border border-red-200 bg-[linear-gradient(45deg,#eee_25%,transparent_25%,transparent_50%,#eee_50%,#eee_75%,transparent_75%,transparent)] bg-[length:24px_24px]">
+          {% if merch.thumbnail %}
+            <img id="d-thumb" src="{{ merch.thumbnail }}" alt="{{ merch.name }}" class="w-full h-full object-cover">
+          {% endif %}
+        </div>
+
+        <!-- Content -->
+        <div class="min-w-0">  {# min-w-0 agar wrapping bekerja di grid #}
+          <h1 id="d-name" class="text-4xl font-extrabold text-[#3b0b0b] leading-tight mb-2 break-words">
+            {{ merch.name }}
+          </h1>
+
+          <p class="text-gray-700 mb-4">
+            <span class="font-semibold">Vendor:</span> <span id="d-vendor">{{ merch.vendor }}</span>
+            <span class="mx-2 text-gray-400">•</span>
+            <span class="font-semibold">Category:</span>
+            <span id="d-category" class="capitalize">{{ merch.category }}</span>
+          </p>
+
+          {% if merch.description %}
+          <div id="d-desc" class="text-gray-700 mb-6 break-words break-all overflow-hidden">
+            {{ merch.description }}
+          </div>
+          {% endif %}
+
+          <!-- Price box -->
+          <div class="inline-flex items-baseline gap-1 rounded-xl border-2 border-[#e11d2a] px-4 py-3 mb-5 w-fit max-w-full">
+            <span class="text-xl font-semibold text-[#7f1d1d]">Rp</span>
+            <span id="d-price" class="text-4xl font-extrabold leading-none text-[#7f1d1d] whitespace-nowrap">
+              {{ merch.price|intcomma }}
+            </span>
+          </div>
+
+          <!-- Actions -->
+          <div class="flex items-center gap-3">
+            {% if merch.link %}
+            <a href="{{ merch.link }}" target="_blank" rel="noopener noreferrer"
+               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#e11d2a] text-[#b91c1c] hover:bg-[#e11d2a] hover:text-white transition">
+              Visit vendor
+            </a>
+            {% endif %}
+
+            {% if user.is_authenticated and user.is_admin %}
+            <!-- EDIT (admin) -->
+            <button type="button"
+                    id="editBtn"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-600 text-white bg-red-600 hover:bg-red-700 transition"
+                    data-url="{% url 'merch:update_merch' merch.id %}"
+                    data-id="{{ merch.id }}"
+                    data-name="{{ merch.name|escape }}"
+                    data-vendor="{{ merch.vendor|escape }}"
+                    data-price="{{ merch.price }}"
+                    data-stock="{{ merch.stock }}"
+                    data-thumbnail="{{ merch.thumbnail|default:''|escape }}"
+                    data-category="{{ merch.category }}"
+                    data-link="{{ merch.link|default:''|escape }}"
+                    data-description="{{ merch.description|default:''|escape }}">
+              Edit
+            </button>
+
+            <!-- DELETE (admin) -->
+            <button type="button"
+                    id="deleteBtn"
+                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-600 text-white bg-red-600 hover:bg-red-700 transition">
+              Delete
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+{% if user.is_authenticated and user.is_admin %}
+<!-- Edit Modal -->
+<div id="editModal" class="hidden fixed inset-0 z-50 w-full h-full flex items-center justify-center">
+  <div class="absolute inset-0 bg-black/60" onclick="EditDetail.hide()"></div>
+
+  <div class="relative bg-white w-[92%] max-w-xl rounded-2xl border border-gray-200 shadow-xl p-6">
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-2xl font-bold text-gray-900">Edit Merch</h3>
+      <button type="button" class="px-2 py-1 rounded hover:bg-gray-100" onclick="EditDetail.hide()">✕</button>
+    </div>
+
+    <form id="editForm" class="space-y-4" novalidate>
+      <input type="hidden" name="id" id="edit-id">
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Name</label>
+        <input name="name" id="edit-name" required class="w-full border rounded-lg px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Vendor</label>
+        <input name="vendor" id="edit-vendor" required class="w-full border rounded-lg px-3 py-2">
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-sm font-medium mb-1">Price</label>
+          <input type="number" min="0" name="price" id="edit-price" class="w-full border rounded-lg px-3 py-2">
+        </div>
+        <div>
+          <label class="block text-sm font-medium mb-1">Stock</label>
+          <input type="number" min="0" name="stock" id="edit-stock" class="w-full border rounded-lg px-3 py-2">
+        </div>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Thumbnail URL</label>
+        <input name="thumbnail" id="edit-thumbnail" class="w-full border rounded-lg px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Category</label>
+        <select name="category" id="edit-category" class="w-full border rounded-lg px-3 py-2">
+          <option value="jersey">Jersey</option>
+          <option value="jacket">Jacket</option>
+          <option value="hoodie">Hoodie</option>
+          <option value="cap">Cap</option>
+          <option value="scarf">Scarf</option>
+          <option value="keychain">Keychain</option>
+          <option value="others">Others</option>
+        </select>
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Product Link</label>
+        <input name="link" id="edit-link" class="w-full border rounded-lg px-3 py-2">
+      </div>
+
+      <div>
+        <label class="block text-sm font-medium mb-1">Description</label>
+        <textarea name="description" id="edit-description" rows="4" class="w-full border rounded-lg px-3 py-2"></textarea>
+      </div>
+
+      <p id="editError" class="hidden text-sm text-red-600"></p>
+
+      <div class="flex items-center justify-end gap-3 pt-2">
+        <button type="button" class="px-4 py-2 rounded border border-gray-300" onclick="EditDetail.hide()">Cancel</button>
+        <button id="editSubmit" type="submit" class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white">
+          Save Changes
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+
+<script>
+function getCookie(name){
+  const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)');
+  return m ? m.pop() : '';
+}
+function cap(s){ return (s||'').replace(/^./, c=>c.toUpperCase()); }
+function formatRupiah(n){ try{ return new Intl.NumberFormat('id-ID').format(Number(n||0)); }catch{ return String(n); } }
+async function postForm(url, fd){
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'X-CSRFToken': getCookie('csrftoken'), 'X-Requested-With':'XMLHttpRequest' },
+    body: fd
+  });
+  const ct = res.headers.get('content-type')||'';
+  if (!res.ok) throw new Error(ct.includes('application/json') ? (await res.json()).detail || 'Request failed' : await res.text());
+  return ct.includes('application/json') ? res.json() : res.text();
+}
+
+/* ========= Delete ========= */
+document.getElementById('deleteBtn')?.addEventListener('click', async ()=>{
+  if (!confirm('Delete this merch?')) return;
+  try{
+    await postForm("{% url 'merch:delete_merch' merch.id %}", new FormData());
+    window.location.href = "{% url 'merch:show_merch' %}";
+  }catch(err){
+    alert('Gagal menghapus item.');
+    console.error(err);
+  }
+});
+
+/* ========= Edit ========= */
+const EditDetail = (function(){
+  const modal = document.getElementById('editModal');
+  const form  = document.getElementById('editForm');
+  const errEl = document.getElementById('editError');
+  const submitBtn = document.getElementById('editSubmit');
+  const editBtn = document.getElementById('editBtn');
+
+  const fields = {
+    id: document.getElementById('edit-id'),
+    name: document.getElementById('edit-name'),
+    vendor: document.getElementById('edit-vendor'),
+    price: document.getElementById('edit-price'),
+    stock: document.getElementById('edit-stock'),
+    thumbnail: document.getElementById('edit-thumbnail'),
+    category: document.getElementById('edit-category'),
+    link: document.getElementById('edit-link'),
+    description: document.getElementById('edit-description'),
+  };
+
+  function show(){
+    // prefill dari dataset tombol edit
+    fields.id.value          = editBtn.dataset.id || '';
+    fields.name.value        = editBtn.dataset.name || '';
+    fields.vendor.value      = editBtn.dataset.vendor || '';
+    fields.price.value       = editBtn.dataset.price || '';
+    fields.stock.value       = editBtn.dataset.stock || '';
+    fields.thumbnail.value   = editBtn.dataset.thumbnail || '';
+    fields.category.value    = (editBtn.dataset.category || 'others').toLowerCase();
+    fields.link.value        = editBtn.dataset.link || '';
+    fields.description.value = editBtn.dataset.description || '';
+
+    errEl.classList.add('hidden'); errEl.textContent='';
+    modal.classList.remove('hidden');
+    setTimeout(()=>fields.name.focus(),0);
+  }
+  function hide(){ modal.classList.add('hidden'); }
+
+  editBtn?.addEventListener('click', show);
+
+  form?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    submitBtn.disabled = true; submitBtn.textContent = 'Saving...';
+    errEl.classList.add('hidden'); errEl.textContent='';
+
+    try{
+      const data = await postForm(editBtn.dataset.url, new FormData(form));
+
+      // Update tampilan detail
+      document.getElementById('d-name')  .textContent = data.name;
+      document.getElementById('d-vendor').textContent = data.vendor;
+      document.getElementById('d-category').textContent = cap(data.category);
+      document.getElementById('d-price').textContent   = formatRupiah(data.price);
+      if (data.description !== undefined){
+        const descEl = document.getElementById('d-desc');
+        if (descEl) descEl.textContent = data.description || '';
+      }
+      if (data.thumbnail){
+        const img = document.getElementById('d-thumb');
+        if (img) img.src = data.thumbnail;
+      }
+
+      // Sinkronkan dataset tombol edit untuk edit berikutnya
+      editBtn.dataset.name = data.name || '';
+      editBtn.dataset.vendor = data.vendor || '';
+      editBtn.dataset.price = data.price ?? '';
+      editBtn.dataset.stock = data.stock ?? '';
+      editBtn.dataset.thumbnail = data.thumbnail || '';
+      editBtn.dataset.category = data.category || 'others';
+      editBtn.dataset.link = data.link || '';
+      editBtn.dataset.description = data.description || '';
+
+      hide();
+    }catch(err){
+      errEl.textContent = String(err.message||err).slice(0,300);
+      errEl.classList.remove('hidden');
+    }finally{
+      submitBtn.disabled = false; submitBtn.textContent = 'Save Changes';
+    }
+  });
+
+  // esc
+  document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !modal.classList.contains('hidden')) hide(); });
+  return { show, hide };
+})();
+</script>
+{% endblock content %}
