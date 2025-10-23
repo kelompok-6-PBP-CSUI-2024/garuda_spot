@@ -59,7 +59,7 @@
 <script>
   const TICKETS_API_ENDPOINT = "{% url 'ticket:show_json' %}";
   const FORM_MATCH_URL = "{% url 'ticket:form_match' %}";
-  const IS_AUTH = {{ request.user.is_authenticated|yesno:'true,false' }};
+  const IS_AUTH =true;
 
   const loadingSpinner = document.getElementById('loading');
   const errorMessage = document.getElementById('error');
@@ -97,18 +97,18 @@
       const btnEdit = document.createElement('button');
       btnEdit.className = 'px-2 py-1 text-sm rounded border';
       btnEdit.textContent = 'Edit Match';
-      btnEdit.addEventListener('click', () => openModalWith(`{% url 'ticket:form_match_edit' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.uuid)));
+      btnEdit.addEventListener('click', () => openModalWith(`{% url 'ticket:form_match_edit' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
 
       const btnAddLink = document.createElement('button');
       btnAddLink.className = 'px-2 py-1 text-sm rounded border';
       btnAddLink.textContent = 'Add Link';
-      btnAddLink.addEventListener('click', () => openModalWith(`{% url 'ticket:form_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.uuid)));
+      btnAddLink.addEventListener('click', () => openModalWith(`{% url 'ticket:form_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
 
       const btnDelete = document.createElement('button');
       btnDelete.className = 'px-2 py-1 text-sm rounded border border-red-300 text-red-700';
       btnDelete.textContent = 'Delete';
       btnDelete.addEventListener('click', async () => {
-        const url = `{% url 'ticket:delete_ticket' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.uuid);
+        const url = `{% url 'ticket:delete_ticket' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id);
         await fetch(url, { method: 'POST' }).catch(() => {});
         await fetchTickets();
       });
@@ -132,7 +132,7 @@
         del.textContent = 'Delete';
         del.addEventListener('click', async (e) => {
           e.preventDefault();
-          const url = `{% url 'ticket:delete_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', l.uuid);
+          const url = `{% url 'ticket:delete_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', l.link_id);
           await fetch(url, { method: 'POST' }).catch(() => {});
           await fetchTickets();
         });
@@ -201,4 +201,3 @@
   if (btnOpenCreate) btnOpenCreate.addEventListener('click', () => openModalWith(FORM_MATCH_URL));
   </script>
 {% endblock %}
-

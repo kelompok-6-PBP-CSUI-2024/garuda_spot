@@ -44,7 +44,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'news',
     'merch',
-    'accounts'
+    'accounts',
+    'ticket',
 ]
 
 LOGIN_URL = 'accounts:login'
