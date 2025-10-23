@@ -94,12 +94,11 @@ def show_json_by_id(request, news_id):
     }
     return JsonResponse(data)
 
-@csrf_exempt
-@require_POST
 @login_required
+@require_POST
 def add_news_entry_ajax(request):
     if not getattr(request.user, "is_admin", False):
-        return HttpResponseForbidden(b"Admins only")
+        return HttpResponseForbidden("Admins only")
 
     title = strip_tags(request.POST.get("title", "")).strip()
     category = strip_tags(request.POST.get("category", "")).strip()
@@ -107,12 +106,30 @@ def add_news_entry_ajax(request):
     content = strip_tags(request.POST.get("content", ""))
 
     if not (title and category and content):
-        return HttpResponse(b"INVALID", status=400)
+        return JsonResponse({"error": "title, category, content are required"}, status=400)
 
-    News.objects.create(
+    n = News.objects.create(
         title=title,
         category=category,
         publish_date=publish_date,
         content=content,
     )
-    return HttpResponse(b"CREATED", status=201)
+    return JsonResponse(
+        {
+            "id": str(n.id),
+            "title": n.title,
+            "category": n.category,
+            "publish_date": n.publish_date,
+            "content": n.content,
+        },
+        status=201,
+    )
+
+@login_required
+@require_POST
+def delete_news_ajax(request, id):
+    if not getattr(request.user, "is_admin", False):
+        return HttpResponseForbidden("Admins only")
+    obj = get_object_or_404(News, pk=id)
+    obj.delete()
+    return JsonResponse({"deleted": str(id)})

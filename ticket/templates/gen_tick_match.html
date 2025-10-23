@@ -1,0 +1,33 @@
+<form id="match-form" method="post" action="{% if match %}{% url 'ticket:edit_ticket' match.uuid %}{% else %}{% url 'ticket:create_ticket' %}{% endif %}">
+  <div class="space-y-3">
+    <div>
+      <label class="block text-sm font-medium">Team 1</label>
+      <input name="team1" class="w-full border rounded p-2" value="{{ match.team1|default_if_none:'' }}" required />
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Team 2</label>
+      <input name="team2" class="w-full border rounded p-2" value="{{ match.team2|default_if_none:'' }}" required />
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Image URL Team 1</label>
+      <input name="img_team1" class="w-full border rounded p-2" value="{{ match.img_team1|default_if_none:'' }}" required />
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Image URL Team 2</label>
+      <input name="img_team2" class="w-full border rounded p-2" value="{{ match.img_team2|default_if_none:'' }}" required />
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Image URL Arena (optional)</label>
+      <input name="img_arena" class="w-full border rounded p-2" value="{{ match.img_arena|default_if_none:'' }}" />
+    </div>
+    <div>
+      <label class="block text-sm font-medium">Date</label>
+      <input type="date" name="date" class="w-full border rounded p-2" value="{{ match.date|date:'Y-m-d' }}" required />
+    </div>
+  </div>
+  <div class="mt-4 flex justify-end gap-2">
+    <button type="button" data-close-modal class="px-3 py-2 rounded border">Cancel</button>
+    <button type="submit" class="px-3 py-2 rounded bg-green-600 text-white">{% if match %}Update{% else %}Create{% endif %}</button>
+  </div>
+</form>
+
