@@ -1,0 +1,277 @@
+{# forum/templates/forum/post_list.html #}
+{% load static %}
+{% if partial %}
+  {% for p in posts %}
+    {% include "forum/_post_card.html" with p=p %}
+  {% empty %}
+    <p class="muted">Belum ada posting.</p>
+  {% endfor %}
+{% else %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Garuda Spot</title>
+  <link rel="stylesheet" href="{% static 'forum/forum.css' %}">
+  <style>
+    /* ===== Layout ===== */
+    body{
+      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;
+    }
+    .wrap{
+      display:grid;
+      grid-template-columns:minmax(0,1fr) 160px;   /* konten | sidebar */
+      grid-template-areas:"content sidebar";
+      gap:24px; max-width:1100px; margin:0 auto; padding:16px;
+    }
+    .content{ grid-area:content; min-width:0; overflow:visible; }
+    #post-list{ min-width:0; overflow:visible; }
+    .sidebar{ grid-area:sidebar; }
+
+    /* ===== Sidebar ===== */
+    .sidebar{ background:#8c1d1d; color:#fff; border-radius:10px; padding:10px; }
+    .sidebar h3{ letter-spacing:.08em; margin:20px 0 16px; font-weight:800; text-align:center; }
+    .sidebar a{ display:block; color:#fff; text-decoration:none; padding:8px 0; opacity:.9; text-align:center; }
+    .sidebar a.active{ font-weight:700; text-decoration:underline; }
+
+    /* ===== Form post ===== */
+    .post-form{ border:1px solid #eee; border-radius:12px; padding:12px 14px; margin-bottom:14px; background:#8c1d1d; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+    .post-form input,.post-form textarea,.post-form select{
+      width:100%; max-width:100%; box-sizing:border-box; margin:6px 0; padding:8px 10px;
+      border:1px solid #e5e7eb; border-radius:8px;
+    }
+
+    /* ===== Toolbar ===== */
+    .toolbar{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:14px; }
+    .toolbar input,.toolbar select{ padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; }
+
+    /* ===== Card & teks: anti kepotong ===== */
+    .card{
+      border-top:1px solid #f2b3b3;
+      padding:22px 12px 18px 0;
+      box-sizing:border-box;
+      overflow:visible;
+      min-width:0;
+    }
+    .meta{ font-size:13px; color:#6b7280; display:flex; gap:10px; }
+    .meta span:first-child{ font-weight:700; } /* penulis bold */
+
+    .title{
+      font-size:18px; font-weight:800; margin:6px 0 6px;
+      overflow:visible;
+      overflow-wrap:anywhere; word-break:break-word;
+    }
+    .card p, .muted{
+      color:#6b7280; white-space:normal;
+      overflow:visible; overflow-wrap:anywhere; word-break:break-word;
+      max-width:100%; padding-right:8px;
+    }
+    .right-tag{ margin-left:auto; color:#ef4444; position:static; box-shadow:0 4px 12px rgba(0,0,0,.25); }
+
+    .likebar{ display:flex; align-items:center; gap:10px; margin-top:8px; }
+    .btn-like{ border:none; background:transparent; cursor:pointer; line-height:1; transition:transform .15s ease-in-out; }
+    .btn-like:hover{ transform:scale(1.1); }
+    .btn-like .heart{ font-size:20px; color:#ccc; }
+    .btn-like.liked .heart{ color:#8c1d1d; }               
+
+    /* ===== Misc ===== */
+    .btn{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 12px; background:#fff; cursor:pointer; }
+    .loadmore{ display:block; margin:20px auto; border:1px solid #e5e7eb; padding:10px 14px; border-radius:10px; background:#fff; cursor:pointer; }
+
+    .post-text{
+  white-space: pre-wrap;      /* newline tetap tampil, dan baris panjang ikut wrap */
+  overflow-wrap: anywhere;    /* kata super panjang tetap patah */
+  word-break: break-word;
+  max-width: 100%;
+  color: #6b7280;
+  margin: 6px 0 0;
+}
+  </style>
+</head>
+<body
+  data-initial-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
+  data-has-next="{% if page_obj and page_obj.has_next %}true{% else %}false{% endif %}"
+>
+  <div class="wrap">
+    <aside class="sidebar">
+      <h3>FORUM</h3>
+      <a href="#" data-cat="all" class="js-cat {% if active_category == 'all' %}active{% endif %}">Semua</a>
+      {% for c in categories %}
+        <a href="#" data-cat="{{ c.slug }}" class="js-cat {% if active_category == c.slug %}active{% endif %}">{{ c.name }}</a>
+      {% endfor %}
+    </aside>
+
+    <main class="content">
+      <div class="toolbar">
+        <div class="muted">Garuda Spot - {{ year }}</div>
+        <form id="search-form">
+          <input type="search" name="q" id="q" placeholder="Cari topik…" value="{{ form.q.value|default:'' }}">
+          <input type="hidden" name="category" id="category" value="{{ active_category }}">
+        </form>
+      </div>
+
+      {# Form buat nulis post (AJAX) #}
+      <form id="post-create-form" class="post-form">
+        {% csrf_token %}
+        <input type="text" name="title" placeholder="Judul" required>
+        <input type="text" name="author_name" placeholder="Penulis (opsional)">
+        <select name="category" required>
+          <option value="">-- Pilih Kategori --</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {% if active_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <textarea name="body" rows="4" placeholder="Tulis isi post…" required></textarea>
+        <button type="submit" class="btn">Kirim Post</button>
+        <span id="post-create-msg" class="muted"></span>
+      </form>
+
+      <div id="post-list">
+        {% for p in posts %}
+          {% include "forum/_post_card.html" with p=p %}
+        {% empty %}
+          <p class="muted">Belum ada posting.</p>
+        {% endfor %}
+      </div>
+
+      <button id="load-more" class="loadmore" {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
+        Muat lebih banyak
+      </button>
+    </main>
+  </div>
+
+  <script>
+  (function(){
+    /* CSRF helper */
+    function getCookie(name){
+      const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return m ? m.pop() : '';
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    /* Like / Unlike (toggle) */
+    document.getElementById('post-list').addEventListener('click', function(e){
+      const btn = e.target.closest('.btn-like');
+      if (!btn) return;
+
+      const card = btn.closest('.card');
+      const slug = card?.dataset?.slug;
+      if (!slug) return;
+
+      fetch(`{% url 'forum:post_like' 'SLUG_PLACEHOLDER' %}`.replace('SLUG_PLACEHOLDER', slug), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrftoken }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) return;
+        const heartEl = btn.querySelector('.heart');
+        const countEl = card.querySelector('.like-count');
+        if (countEl) countEl.textContent = data.like_count;
+
+        /* pakai simbol supaya bisa diwarnai via CSS */
+      if (data.liked) {
+        btn.classList.add('liked');
+      } else {
+        btn.classList.remove('liked');
+      }
+      })
+      .catch(() => {});
+    });
+
+    const listEl = document.getElementById('post-list');
+    const loadBtn = document.getElementById('load-more');
+    const qEl = document.getElementById('q');
+    const catInput = document.getElementById('category');
+    const postForm = document.getElementById('post-create-form');
+    const postMsg = document.getElementById('post-create-msg');
+
+    const initialPageAttr = document.body.getAttribute('data-initial-page');
+    let page = parseInt(initialPageAttr || '1', 10);
+
+    function fetchList(opts={}){
+      const params = new URLSearchParams({
+        page: opts.page || 1,
+        q: qEl.value || '',
+        category: catInput.value || 'all'
+      });
+      const url = "{% url 'forum:post_list_partial' %}?" + params.toString();
+      return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+        .then(r => r.json());
+    }
+    function render(html, append=false){
+      if(append) listEl.insertAdjacentHTML('afterbegin', html); /* prepend post baru */
+      else listEl.innerHTML = html;
+    }
+    function updateLoadMore(show){ loadBtn.hidden = !show; }
+
+    /* Submit post baru */
+    postForm.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      postMsg.textContent = 'Mengirim…';
+      const formData = new FormData(postForm);
+      fetch("{% url 'forum:post_create' %}", {
+        method: 'POST',
+        headers: {'X-Requested-With':'XMLHttpRequest', 'X-CSRFToken': csrftoken},
+        body: formData
+      }).then(r=>r.json())
+        .then(data=>{
+          if(data.ok){
+            render(data.html, true);
+            postForm.reset();
+            const sel = postForm.querySelector('select[name=category]');
+            if (sel && catInput.value !== 'all') sel.value = '';
+            postMsg.textContent = 'Terkirim!';
+            setTimeout(()=>postMsg.textContent='', 1200);
+          }else{
+            postMsg.textContent = 'Gagal: ' + JSON.stringify(data.errors);
+          }
+        }).catch(()=> postMsg.textContent = 'Gagal jaringan');
+    });
+
+    /* Sidebar filter */
+    document.querySelectorAll('.js-cat').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.querySelectorAll('.js-cat').forEach(x=>x.classList.remove('active'));
+        a.classList.add('active');
+        catInput.value = a.dataset.cat;
+        page = 1;
+        fetchList({page}).then(({html, has_next}) => {
+          listEl.innerHTML = html;
+          updateLoadMore(Boolean(has_next));
+          history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
+        });
+      });
+    });
+
+    /* Search (debounce) */
+    let t;
+    qEl.addEventListener('input', ()=>{
+      clearTimeout(t);
+      t = setTimeout(()=>{
+        page = 1;
+        fetchList({page}).then(({html, has_next}) => {
+          listEl.innerHTML = html;
+          updateLoadMore(Boolean(has_next));
+          history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
+        });
+      }, 320);
+    });
+
+    /* Load more */
+    loadBtn.addEventListener('click', ()=>{
+      page += 1;
+      fetchList({page}).then(({html, has_next}) => {
+        listEl.insertAdjacentHTML('beforeend', html);
+        updateLoadMore(Boolean(has_next));
+      }).catch(()=>{ page -= 1; });
+    });
+
+    updateLoadMore(document.body.getAttribute('data-has-next') === 'true');
+  })();
+  </script>
+</body>
+</html>
+{% endif %}

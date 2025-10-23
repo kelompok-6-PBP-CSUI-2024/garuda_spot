@@ -1,0 +1,8 @@
+{# forum/templates/forum/_comment.html #}
+<div class="comment">
+  <div class="meta" style="font-size:13px;color:#6b7280;margin-bottom:4px">
+    <strong>{{ c.author_name }}</strong> • {{ c.created_at|date:"d M Y H:i" }}
+  </div>
+  <div>{{ c.body|linebreaksbr }}</div>
+  <hr style="border:none;border-top:1px solid #eee;margin:10px 0">
+</div>

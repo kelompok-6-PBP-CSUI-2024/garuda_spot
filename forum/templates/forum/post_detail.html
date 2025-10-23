@@ -1,0 +1,93 @@
+{# forum/templates/forum/post_detail.html #}
+{% load static %}
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>{{ post.title }} · Garuda Spot</title>
+  <link rel="stylesheet" href="{% static 'forum/forum.css' %}">
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;}
+    .wrap{max-width:900px;margin:0 auto;padding:16px; min-width:0; overflow:visible;}
+    .meta{font-size:13px;color:#6b7280;display:flex;gap:10px}
+    .title{font-size:30px;font-weight:800;margin:8px 0 12px; overflow-wrap:anywhere; word-break:break-word;}
+    /* ===== Body teks: anti kepotong, bungkus semua kata ===== */
+    .post-body, .article-body, .post-content, .wrap p{
+      color:#4b5563; line-height:1.6;
+      white-space:normal; overflow:visible;
+      overflow-wrap:anywhere; word-break:break-word;
+      max-width:100%;
+    }
+    /* Gambar besar tidak melebihi lebar */
+    .post-body img, .article-body img{ max-width:100%; height:auto; display:block; margin:10px auto; }
+    /* Form komentar */
+    .comment-form{border:1px solid #eee;border-radius:12px;padding:12px 14px;margin-top:18px}
+    .comment-form input,.comment-form textarea{width:100%;margin:6px 0;padding:8px 10px;border:1px solid #e5e7eb;border-radius:8px}
+    .btn{border:1px solid #e5e7eb;border-radius:10px;padding:8px 12px;background:#fff;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <a href="{% url 'forum:post_list' %}">← Kembali ke forum</a>
+    <div class="meta">
+      <span>{{ post.author_name }}</span><span>•</span>
+      <span>{{ post.created_at|date:'l, d F Y' }}</span>
+      <span style="margin-left:auto;color:#ef4444">{{ post.category.name }}</span>
+    </div>
+    <div class="title">{{ post.title }}</div>
+
+    <div class="post-body">{{ post.body|linebreaksbr }}</div>
+
+    <h3 style="margin-top:24px">Komentar</h3>
+    <div id="comment-list">
+      {% for c in comments %}
+        {% include "forum/_comment.html" with c=c %}
+      {% empty %}
+        <p class="muted">Belum ada komentar.</p>
+      {% endfor %}
+    </div>
+
+    <form id="comment-form" class="comment-form">
+      {% csrf_token %}
+      <input type="text" name="author_name" placeholder="Nama (opsional)">
+      <textarea name="body" rows="3" placeholder="Tulis komentar…" required></textarea>
+      <button type="submit" class="btn">Kirim Komentar</button>
+      <span id="cmsg" class="muted"></span>
+    </form>
+  </div>
+
+  <script>
+  (function(){
+    function getCookie(name){
+      const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return m ? m.pop() : '';
+    }
+    const csrftoken = getCookie('csrftoken');
+    const form = document.getElementById('comment-form');
+    const list = document.getElementById('comment-list');
+    const cmsg = document.getElementById('cmsg');
+
+    form.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      cmsg.textContent = 'Mengirim…';
+      const formData = new FormData(form);
+      fetch("{% url 'forum:comment_create' post.slug %}", {
+        method:'POST',
+        headers:{'X-Requested-With':'XMLHttpRequest','X-CSRFToken':csrftoken},
+        body: formData
+      }).then(r=>r.json()).then(data=>{
+        if(data.ok){
+          list.insertAdjacentHTML('beforeend', data.html);
+          form.reset();
+          cmsg.textContent = 'Terkirim!';
+          setTimeout(()=>cmsg.textContent='', 1200);
+        }else{
+          cmsg.textContent = 'Gagal: ' + JSON.stringify(data.errors);
+        }
+      }).catch(()=> cmsg.textContent='Gagal jaringan');
+    });
+  })();
+  </script>
+</body>
+</html>
