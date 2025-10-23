@@ -13,7 +13,9 @@ from django.views.decorators.http import require_POST
 from django.http import JsonResponse, HttpResponseForbidden, HttpResponseNotAllowed
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
+from django.contrib.auth.decorators import login_required
 
+@login_required
 def post_list(request):
     categories = Category.objects.all()
     base_ctx = {
@@ -26,6 +28,7 @@ def post_list(request):
     base_ctx["form"] = PostFilterForm(request.GET or None)
     return render(request, "forum/post_list.html", base_ctx)
 
+@login_required
 def post_list_partial(request):
     try:
         ctx = _get_posts_context(request)
@@ -34,6 +37,7 @@ def post_list_partial(request):
     html = render_to_string("forum/post_list.html", {**ctx, "partial": True}, request=request)
     return JsonResponse({"html": html, "has_next": ctx["page_obj"].has_next(), "page": ctx["page_obj"].number})
 
+@login_required
 def post_create(request):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -44,6 +48,7 @@ def post_create(request):
         return JsonResponse({"ok": True, "html": card_html})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
+@login_required
 def post_detail(request, slug):
     post = get_object_or_404(Post.objects.select_related("category"), slug=slug, status=Post.PUBLISHED)
     comments = post.comments.all()
@@ -56,6 +61,7 @@ def post_detail(request, slug):
         "active_category": post.category.slug
     })
 
+@login_required
 def comment_create(request, slug):
     if request.method != "POST":
         return JsonResponse({"error": "Invalid method"}, status=405)
@@ -69,6 +75,7 @@ def comment_create(request, slug):
         return JsonResponse({"ok": True, "html": html})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
+@login_required
 def _get_posts_context(request):
     # Bind form dengan GET; kalau GET kosong, form.is_bound == False
     form = PostFilterForm(request.GET or None)
@@ -113,6 +120,7 @@ def _get_posts_context(request):
         "liked_ids": set(request.session.get("liked_posts", [])), 
     }
 
+@login_required
 def post_list(request):
     ensure_default_categories()  # <== ADD THIS
     categories = Category.objects.all()
@@ -137,6 +145,7 @@ def ensure_default_categories():
             Category(name="Match", slug="match"),
         ])
 
+@login_required
 @require_POST
 def post_like(request, slug):
     """
@@ -166,6 +175,7 @@ def post_like(request, slug):
     post.refresh_from_db(fields=["like_count"])
     return JsonResponse({"ok": True, "liked": liked, "like_count": post.like_count})
 
+@login_required
 @require_POST
 def post_delete(request, slug):
     """

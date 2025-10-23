@@ -46,12 +46,12 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'forum',
     'django.contrib.humanize',
     'news',
     'merch',
     'accounts',
     'ticket',
+    'forum'
 ]
 
 LOGIN_URL = 'accounts:login'
