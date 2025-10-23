@@ -12,11 +12,8 @@ from django.contrib.auth.decorators import login_required
 from .forms import NewsForm
 from .models import News
 
-@login_required
 def show_main(request):
-    news_list = News.objects.all()
-    return render(request, "main.html", {"news_list": news_list})
-
+    return render(request, "main.html")
 
 @login_required
 def show_news(request, id):
@@ -34,7 +31,6 @@ def create_news(request):
         form.save()
         return redirect('news:show_main')
     return render(request, "create_news.html", {"form": form})
-
 
 @login_required
 def edit_news(request, id):
@@ -62,18 +58,42 @@ def show_xml(request):
     xml_data = serializers.serialize("xml", News.objects.all())
     return HttpResponse(xml_data, content_type="application/xml")
 
+from django.core.paginator import Paginator, EmptyPage
+from django.views.decorators.http import require_GET
+
+@require_GET
 def show_json(request):
-    data = [
-        {
-            "id": str(n.id),
-            "title": n.title,
-            "category": n.category,
-            "publish_date": n.publish_date,
-            "content": n.content,
-        }
-        for n in News.objects.all()
-    ]
-    return JsonResponse(data, safe=False)
+    qs = News.objects.all().values("id", "title", "category", "publish_date", "content")
+    try:
+        page = int(request.GET.get("page", 1))
+    except ValueError:
+        page = 1
+    try:
+        page_size = int(request.GET.get("page_size", 20))
+    except ValueError:
+        page_size = 20
+    page_size = max(1, min(page_size, 100))
+
+    paginator = Paginator(qs, page_size)
+    try:
+        page_obj = paginator.page(page)
+    except EmptyPage:
+        return JsonResponse({
+            "items": [],
+            "page": page,
+            "page_size": page_size,
+            "has_next": False,
+            "total": paginator.count,
+        })
+
+    return JsonResponse({
+        "items": list(page_obj.object_list),
+        "page": page,
+        "page_size": page_size,
+        "has_next": page_obj.has_next(),
+        "total": paginator.count,
+    })
+
 
 def show_xml_by_id(request, news_id):
     qs = News.objects.filter(pk=news_id)
