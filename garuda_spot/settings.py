@@ -49,7 +49,8 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'news',
     'merch',
-    'accounts'
+    'accounts',
+    'ticket',
 ]
 
 LOGIN_URL = 'accounts:login'

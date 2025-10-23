@@ -5,11 +5,10 @@
 
 <div class="flex items-center justify-between mb-4">
   <div>
-    {% if request.user.is_authenticated and request.user.is_admin %}
-      <a href="#"
-         class="inline-block px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
+    {% if request.user.is_authenticated %}
+      <button id="btn-open-create" class="inline-block px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
         Create Ticket
-      </a>
+      </button>
     {% endif %}
   </div>
 
@@ -36,7 +35,7 @@
   </div>
 
 <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
-  <p class="text-gray-600">Loading tickets…</p>
+  <p class="text-gray-600">Loading tickets...</p>
   </div>
 
 <div id="error" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
@@ -49,8 +48,18 @@
 
 <div id="grid" style="display:none"></div>
 
+<!-- Modal -->
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center">
+  <div class="bg-white w-full max-w-lg rounded shadow-lg p-4">
+    <div id="modal-body"></div>
+  </div>
+  
+</div>
+
 <script>
   const TICKETS_API_ENDPOINT = "{% url 'ticket:show_json' %}";
+  const FORM_MATCH_URL = "{% url 'ticket:form_match' %}";
+  const IS_AUTH =true;
 
   const loadingSpinner = document.getElementById('loading');
   const errorMessage = document.getElementById('error');
@@ -82,17 +91,57 @@
     p.className = 'text-gray-600 text-sm mb-2';
     p.textContent = item.date || '';
 
+    const btnRow = document.createElement('div');
+    btnRow.className = 'mb-3 flex gap-2';
+    if (IS_AUTH) {
+      const btnEdit = document.createElement('button');
+      btnEdit.className = 'px-2 py-1 text-sm rounded border';
+      btnEdit.textContent = 'Edit Match';
+      btnEdit.addEventListener('click', () => openModalWith(`{% url 'ticket:form_match_edit' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
+
+      const btnAddLink = document.createElement('button');
+      btnAddLink.className = 'px-2 py-1 text-sm rounded border';
+      btnAddLink.textContent = 'Add Link';
+      btnAddLink.addEventListener('click', () => openModalWith(`{% url 'ticket:form_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
+
+      const btnDelete = document.createElement('button');
+      btnDelete.className = 'px-2 py-1 text-sm rounded border border-red-300 text-red-700';
+      btnDelete.textContent = 'Delete';
+      btnDelete.addEventListener('click', async () => {
+        const url = `{% url 'ticket:delete_ticket' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id);
+        await fetch(url, { method: 'POST' }).catch(() => {});
+        await fetchTickets();
+      });
+
+      btnRow.append(btnEdit, btnAddLink, btnDelete);
+    }
+
     const links = document.createElement('div');
     links.className = 'text-sm text-gray-700';
     (item.links || []).forEach(l => {
       const a = document.createElement('a');
       a.href = l.vendor_link;
       a.className = 'block text-red-600 hover:text-red-700';
-      a.textContent = `${l.vendor} — ${l.price}`;
-      links.appendChild(a);
+      a.textContent = `${l.vendor} - ${l.price}`;
+      const row = document.createElement('div');
+      row.className = 'flex items-center justify-between';
+      row.appendChild(a);
+      if (IS_AUTH) {
+        const del = document.createElement('button');
+        del.className = 'ml-2 text-xs text-red-700 border border-red-300 rounded px-2 py-0.5';
+        del.textContent = 'Delete';
+        del.addEventListener('click', async (e) => {
+          e.preventDefault();
+          const url = `{% url 'ticket:delete_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', l.link_id);
+          await fetch(url, { method: 'POST' }).catch(() => {});
+          await fetchTickets();
+        });
+        row.appendChild(del);
+      }
+      links.appendChild(row);
     });
 
-    wrapper.append(h3, p, links);
+    wrapper.append(h3, p, btnRow, links);
     el.appendChild(wrapper);
     return el;
   }
@@ -118,6 +167,37 @@
   }
 
   document.addEventListener('DOMContentLoaded', fetchTickets);
+
+  // Modal helpers
+  const modal = document.getElementById('modal');
+  const modalBody = document.getElementById('modal-body');
+
+  function closeModal() { modal.classList.add('hidden'); modalBody.innerHTML = ''; }
+  function wireCloseButtons() {
+    modalBody.querySelectorAll('[data-close-modal]').forEach(btn => btn.addEventListener('click', closeModal));
+  }
+
+  async function openModalWith(url) {
+    try {
+      const res = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }});
+      const html = await res.text();
+      modalBody.innerHTML = html;
+      modal.classList.remove('hidden');
+      wireCloseButtons();
+      // intercept form submit
+      const form = modalBody.querySelector('form');
+      if (form) {
+        form.addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const formData = new FormData(form);
+          const res2 = await fetch(form.action, { method: 'POST', body: formData });
+          if (res2.ok) { closeModal(); await fetchTickets(); }
+        });
+      }
+    } catch {}
+  }
+
+  const btnOpenCreate = document.getElementById('btn-open-create');
+  if (btnOpenCreate) btnOpenCreate.addEventListener('click', () => openModalWith(FORM_MATCH_URL));
   </script>
 {% endblock %}
-
