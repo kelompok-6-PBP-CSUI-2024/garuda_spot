@@ -1,0 +1,7 @@
+[
+  {"model": "forum.category", "pk": 1, "fields": {"name": "News",   "slug": "news"}},
+  {"model": "forum.category", "pk": 2, "fields": {"name": "Player", "slug": "player"}},
+  {"model": "forum.category", "pk": 3, "fields": {"name": "Merch",  "slug": "merch"}},
+  {"model": "forum.category", "pk": 4, "fields": {"name": "Ticket", "slug": "ticket"}},
+  {"model": "forum.category", "pk": 5, "fields": {"name": "Match",  "slug": "match"}}
+]

@@ -1,0 +1,14 @@
+{% for p in posts %}
+  <div class="card">
+    <div class="meta">
+      <span>Orang</span>
+      <span>•</span>
+      <span>{{ p.created_at|date:'l, d F Y' }}</span>
+      <span class="right-tag">{{ p.category.name }}</span>
+    </div>
+    <div class="title">{{ p.title }}</div>
+    <p class="muted">{{ p.excerpt|default:p.body|truncatechars:220 }}</p>
+  </div>
+{% empty %}
+  <p class="muted">Belum ada posting.</p>
+{% endfor %}
