@@ -1,0 +1,207 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block meta %}
+<title>Edit Match - {{ match.home_team }} vs {{ match.away_team }}</title>
+{% endblock meta %}
+
+{% block content %}
+<div class="bg-gray-50 w-full min-h-screen py-8">
+  <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <div class="mb-6">
+      <a href="{% url 'schedule:show_main' %}" class="text-gray-600 hover:text-gray-900 font-medium transition-colors">
+        ← Back to Schedule
+      </a>
+    </div>
+    
+    <div class="bg-white rounded-lg border border-gray-200 shadow-lg overflow-hidden">
+      
+      <div class="flex items-center justify-between p-6 border-b">
+        <div>
+          <h1 class="text-2xl font-bold text-gray-900 mb-2">Edit Match</h1>
+          <p class="text-gray-600">Update details for {{ match.home_team }} vs {{ match.away_team }}</p>
+        </div>
+      </div>
+      
+      <div class="px-6 py-4 space-y-6">
+        <form method="POST" id="edit-match-form" class="space-y-6">
+          {% csrf_token %}
+
+          <div class="max-h-[70vh] overflow-y-auto pr-2 space-y-6">
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label for="{{ form.home_team.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.home_team.label }}{% if form.home_team.field.required %}*{% endif %}
+                </label>
+                {{ form.home_team }} 
+                {% for error in form.home_team.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.away_team.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.away_team.label }}{% if form.away_team.field.required %}*{% endif %}
+                </label>
+                {{ form.away_team }} 
+                {% for error in form.away_team.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.home_code.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.home_code.label }}{% if form.home_code.field.required %}*{% endif %}
+                </label>
+                {{ form.home_code }} 
+                {% for error in form.home_code.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.away_code.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.away_code.label }}{% if form.away_code.field.required %}*{% endif %}
+                </label>
+                {{ form.away_code }} 
+                {% for error in form.away_code.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.match_date.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.match_date.label }}{% if form.match_date.field.required %}*{% endif %}
+                </label>
+                {{ form.match_date }} 
+                {% for error in form.match_date.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.location.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.location.label }}{% if form.location.field.required %}*{% endif %}
+                </label>
+                {{ form.location }} 
+                {% for error in form.location.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div class="md:col-span-2">
+                <label for="{{ form.category.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.category.label }}{% if form.category.field.required %}*{% endif %}
+                </label>
+                {{ form.category }} 
+                {% for error in form.category.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+            </div>
+            
+            <div class="grid grid-cols-2 gap-4">
+              <div>
+                <label for="{{ form.home_score.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.home_score.label }}{% if form.home_score.field.required %}*{% endif %}
+                </label>
+                {{ form.home_score }} 
+                {% for error in form.home_score.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+              <div>
+                <label for="{{ form.away_score.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                  {{ form.away_score.label }}{% if form.away_score.field.required %}*{% endif %}
+                </label>
+                {{ form.away_score }} 
+                {% for error in form.away_score.errors %}
+                  <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                {% endfor %}
+              </div>
+            </div>
+
+            <details class="mb-4">
+              <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                Edit Match Statistics (Optional)
+              </summary>
+              <fieldset class="border border-gray-300 p-4 rounded-md mt-2">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                  <div class="space-y-4">
+                    <h4 class="text-md font-semibold text-center">HOME</h4>
+                    <div><label for="{{ form.shots_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.shots_home.label }}</label>{{ form.shots_home }}</div>
+                    <div><label for="{{ form.shots_on_target_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.shots_on_target_home.label }}</label>{{ form.shots_on_target_home }}</div>
+                    <div><label for="{{ form.possession_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.possession_home.label }}</label>{{ form.possession_home }}</div>
+                    <div><label for="{{ form.passes_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.passes_home.label }}</label>{{ form.passes_home }}</div>
+                    <div><label for="{{ form.pass_accuracy_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.pass_accuracy_home.label }}</label>{{ form.pass_accuracy_home }}</div>
+                    <div><label for="{{ form.fouls_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.fouls_home.label }}</label>{{ form.fouls_home }}</div>
+                    <div><label for="{{ form.yellow_cards_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.yellow_cards_home.label }}</label>{{ form.yellow_cards_home }}</div>
+                    <div><label for="{{ form.red_cards_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.red_cards_home.label }}</label>{{ form.red_cards_home }}</div>
+                    <div><label for="{{ form.offsides_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.offsides_home.label }}</label>{{ form.offsides_home }}</div>
+                    <div><label for="{{ form.corners_home.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.corners_home.label }}</label>{{ form.corners_home }}</div>
+                  </div>
+                  <div class="space-y-4">
+                    <h4 class="text-md font-semibold text-center">AWAY</h4>
+                    <div><label for="{{ form.shots_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.shots_away.label }}</label>{{ form.shots_away }}</div>
+                    <div><label for="{{ form.shots_on_target_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.shots_on_target_away.label }}</label>{{ form.shots_on_target_away }}</div>
+                    <div><label for="{{ form.possession_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.possession_away.label }}</label>{{ form.possession_away }}</div>
+                    <div><label for="{{ form.passes_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.passes_away.label }}</label>{{ form.passes_away }}</div>
+                    <div><label for="{{ form.pass_accuracy_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.pass_accuracy_away.label }}</label>{{ form.pass_accuracy_away }}</div>
+                    <div><label for="{{ form.fouls_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.fouls_away.label }}</label>{{ form.fouls_away }}</div>
+                    <div><label for="{{ form.yellow_cards_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.yellow_cards_away.label }}</label>{{ form.yellow_cards_away }}</div>
+                    <div><label for="{{ form.red_cards_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.red_cards_away.label }}</label>{{ form.red_cards_away }}</div>
+                    <div><label for="{{ form.offsides_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.offsides_away.label }}</label>{{ form.offsides_away }}</div>
+                    <div><label for="{{ form.corners_away.id_for_label }}" class="block text-sm font-medium text-gray-700">{{ form.corners_away.label }}</label>{{ form.corners_away }}</div>
+                  </div>
+                </div>
+              </fieldset>
+            </details>
+
+            <details class="mb-4">
+              <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                  Edit Other Details (Lineup, Review)
+              </summary>
+              <div class="space-y-4 mt-2 border border-gray-300 p-4 rounded-md">
+                  <div>
+                    <label for="{{ form.lineup_image_url.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                      {{ form.lineup_image_url.label }}{% if form.lineup_image_url.field.required %}*{% endif %}
+                    </label>
+                    {{ form.lineup_image_url }} 
+                    {% for error in form.lineup_image_url.errors %}
+                      <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  <div>
+                    <label for="{{ form.lineup.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                      {{ form.lineup.label }}{% if form.lineup.field.required %}*{% endif %}
+                    </label>
+                    {{ form.lineup }} 
+                    {% for error in form.lineup.errors %}
+                      <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                    {% endfor %}
+                  </div>
+                  <div>
+                    <label for="{{ form.review.id_for_label }}" class="block text-sm font-medium text-gray-700">
+                      {{ form.review.label }}{% if form.review.field.required %}*{% endif %}
+                    </label>
+                    {{ form.review }} 
+                    {% for error in form.review.errors %}
+                      <p class="mt-1 text-sm text-red-600">{{ error }}</p>
+                    {% endfor %}
+                  </div>
+              </div>
+            </details>
+
+          </div>
+        </form>
+      </div>
+      
+      <div class="flex flex-col sm:flex-row gap-4 p-6 border-t border-gray-200 bg-gray-50">
+        <a href="{% url 'schedule:show_main' %}" class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">
+          Cancel
+        </a>
+        <button type="submit" form="edit-match-form" class="order-1 sm:order-2 flex-1 bg-yellow-500 text-white px-6 py-3 rounded-md font-medium hover:bg-yellow-600 transition-colors">
+          Update Match
+        </button>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

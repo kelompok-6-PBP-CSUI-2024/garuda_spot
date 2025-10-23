@@ -52,7 +52,8 @@ INSTALLED_APPS = [
     'accounts',
     'squad',
     'ticket',
-    'forum'
+    'forum',
+    'schedule',
 ]
 
 LOGIN_URL = 'accounts:login'
