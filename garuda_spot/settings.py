@@ -34,6 +34,10 @@ DEBUG = True
 # temporary fixes
 ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"
+]
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -43,7 +47,18 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'forum'
+    'django.contrib.humanize',
+    'news',
+    'merch',
+    'accounts',
+    'ticket',
 ]
+
+LOGIN_URL = 'accounts:login'
+AUTH_USER_MODEL = "accounts.User"
+LOGIN_REDIRECT_URL = 'news:show_main'
+LOGOUT_REDIRECT_URL = 'news:show_main'
+
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',

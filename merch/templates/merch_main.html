@@ -1,0 +1,416 @@
+{% extends 'base.html' %}
+{% load static %}
+{% load humanize %}
+
+{% block content %}
+<div class="bg-white w-full min-h-screen mt-14 mb-16">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+
+    <!-- Header -->
+    <div>
+      <h1 class="text-3xl font-bold text-gray-900 mb-2">
+        Latest Garuda Spot Merchandise
+      </h1>
+      <div class="flex gap-3">
+        {% if user.is_authenticated and user.is_admin %}
+        <button type="button"
+                onclick="MerchModal.show()"
+                class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white">
+          Add Merch
+        </button>
+        {% endif %}
+      </div>
+    </div>
+
+    {% with filter_val=request.GET.filter|default:'all' sort_val=request.GET.sort|default:'recent' %}
+    <!-- Filters bar -->
+    <div class="flex items-center gap-3" id="filters-bar">
+
+      <!-- Category -->
+        <div class="relative inline-block" id="cat-wrap">
+          <button id="cat-btn"
+                  class="inline-flex items-start justify-between gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900 hover:bg-slate-50 w-[200px]">
+            <span id="cat-label" class="flex-1 text-left whitespace-normal break-words leading-snug">Filters</span>
+            <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.27a.75.75 0 01-.02-1.06z"/></svg>
+          </button>
+          <div id="cat-menu"
+              class="hidden absolute z-10 mt-2 w-[200px] rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+          <ul class="py-1">
+            <li><a href="?filter=all&sort={{ sort_val }}"      class="block px-4 py-2 hover:bg-slate-50">All Merch</a></li>
+            <li><a href="?filter=keychain&sort={{ sort_val }}" class="block px-4 py-2 hover:bg-slate-50">Keychain</a></li>
+            <li><a href="?filter=jersey&sort={{ sort_val }}"   class="block px-4 py-2 hover:bg-slate-50">Jersey</a></li>
+            <li><a href="?filter=jacket&sort={{ sort_val }}"   class="block px-4 py-2 hover:bg-slate-50">Jacket</a></li>
+            <li><a href="?filter=hoodie&sort={{ sort_val }}"   class="block px-4 py-2 hover:bg-slate-50">Hoodie</a></li>
+            <li><a href="?filter=cap&sort={{ sort_val }}"      class="block px-4 py-2 hover:bg-slate-50">Cap</a></li>
+            <li><a href="?filter=scarf&sort={{ sort_val }}"    class="block px-4 py-2 hover:bg-slate-50">Scarf</a></li>
+            <li><a href="?filter=others&sort={{ sort_val }}"   class="block px-4 py-2 hover:bg-slate-50">Others</a></li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Sort -->
+        <div class="relative inline-block" id="sort-wrap">
+          <button id="sort-btn"
+                  class="inline-flex items-start justify-between gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900 hover:bg-slate-50 w-64">
+            <span id="sort-label" class="flex-1 text-left whitespace-normal break-words leading-snug">
+              Sort by: Recently Added
+            </span>
+            <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.27a.75.75 0 01-.02-1.06z"/></svg>
+          </button>
+          <div id="sort-menu"
+              class="hidden absolute z-10 mt-2 w-64 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+          <ul class="py-1">
+            <li><a href="?filter={{ filter_val }}&sort=recent"     class="block px-4 py-2 hover:bg-slate-50">Recently Added</a></li>
+            <li><a href="?filter={{ filter_val }}&sort=price_asc"  class="block px-4 py-2 hover:bg-slate-50">Price: Low → High</a></li>
+            <li><a href="?filter={{ filter_val }}&sort=price_desc" class="block px-4 py-2 hover:bg-slate-50">Price: High → Low</a></li>
+            <li><a href="?filter={{ filter_val }}&sort=popular"    class="block px-4 py-2 hover:bg-slate-50">Most Popular</a></li>
+          </ul>
+        </div>
+      </div>
+
+
+    </div>
+    {% endwith %}
+
+    <!-- Grid daftar merch -->
+    <div id="merch-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
+      {% for m in list_merch %}
+      <article id="merch-card-{{ m.id }}" class="rounded-xl border border-gray-200 bg-white overflow-hidden">
+        <div class="aspect-[4/3] bg-gray-100">
+          {% if m.thumbnail %}
+            <img src="{{ m.thumbnail }}" alt="{{ m.name }}" class="w-full h-full object-cover">
+          {% endif %}
+        </div>
+        <div class="p-4">
+          <h3 class="font-semibold text-gray-900 merch-name">{{ m.name }}</h3>
+          <p class="text-sm text-gray-500 merch-meta">
+            <span class="merch-vendor">{{ m.vendor }}</span> •
+            <span class="merch-category">{{ m.category|capfirst }}</span>
+          </p>
+          <p class="mt-2 font-bold text-gray-900">Rp <span class="merch-price">{{ m.price|intcomma }}</span></p>
+
+          <div class="mt-3 flex gap-2">
+            <a href="{% url 'merch:detail' m.id %}" class="px-3 py-1 rounded border border-gray-300 text-sm">Detail</a>
+
+            {% if user.is_authenticated and user.is_admin %}
+            <!-- EDIT -->
+            <button
+              type="button"
+              class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
+              data-action="edit"
+              data-id="{{ m.id }}"
+              data-url="{% url 'merch:update_merch' m.id %}"
+              data-name="{{ m.name|escape }}"
+              data-vendor="{{ m.vendor|escape }}"
+              data-price="{{ m.price }}"
+              data-stock="{{ m.stock }}"
+              data-thumbnail="{{ m.thumbnail|default:''|escape }}"
+              data-category="{{ m.category }}"
+              data-link="{{ m.link|default:''|escape }}"
+              data-description="{{ m.description|default:''|escape }}">
+              Edit
+            </button>
+
+            <!-- DELETE -->
+            <button
+              type="button"
+              class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
+              data-action="delete"
+              data-url="{% url 'merch:delete_merch' m.id %}">
+              Delete
+            </button>
+            {% endif %}
+          </div>
+        </div>
+      </article>
+      {% empty %}
+      <div class="col-span-full text-center text-gray-500 py-10">Belum ada merchandise.</div>
+      {% endfor %}
+    </div>
+
+    <!-- Loading -->
+    <div id="merch-loading" class="hidden">
+      <div class="border border-gray-200 rounded-2xl p-10 text-center">
+        <div class="mx-auto inline-block w-8 h-8 border-4 border-gray-300 border-t-[#e11d2a] rounded-full animate-spin"></div>
+        <p class="mt-3 text-gray-500">Loading...</p>
+      </div>
+    </div>
+
+  </div>
+  
+  <!-- Create Merch Modal -->
+  <div id="createModal" class="hidden fixed inset-0 z-50 w-full h-full flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/60" onclick="MerchModal.hide()"></div>
+    <div class="relative bg-white w-[92%] max-w-xl rounded-2xl border border-gray-200 shadow-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-2xl font-bold text-gray-900">Add New Merch</h3>
+        <button type="button" class="px-2 py-1 rounded hover:bg-gray-100" onclick="MerchModal.hide()">✕</button>
+      </div>
+      <form id="createForm" class="space-y-4" novalidate>
+        <div><label class="block text-sm font-medium mb-1">Name</label>
+          <input name="name" required class="w-full border rounded-lg px-3 py-2"></div>
+        <div><label class="block text-sm font-medium mb-1">Vendor</label>
+          <input name="vendor" required class="w-full border rounded-lg px-3 py-2"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label class="block text-sm font-medium mb-1">Price</label>
+            <input type="number" min="0" name="price" value="0" class="w-full border rounded-lg px-3 py-2"></div>
+          <div><label class="block text-sm font-medium mb-1">Stock</label>
+            <input type="number" min="0" name="stock" value="0" class="w-full border rounded-lg px-3 py-2"></div>
+        </div>
+        <div><label class="block text-sm font-medium mb-1">Thumbnail URL</label>
+          <input name="thumbnail" class="w-full border rounded-lg px-3 py-2" placeholder="https://..."></div>
+        <div><label class="block text-sm font-medium mb-1">Category</label>
+          <select name="category" class="w-full border rounded-lg px-3 py-2">
+            <option value="jersey">Jersey</option>
+            <option value="jacket">Jacket</option>
+            <option value="hoodie">Hoodie</option>
+            <option value="cap">Cap</option>
+            <option value="scarf">Scarf</option>
+            <option value="keychain">Keychain</option>
+            <option value="others">Others</option>
+          </select></div>
+        <div><label class="block text-sm font-medium mb-1">Product Link</label>
+          <input name="link" class="w-full border rounded-lg px-3 py-2" placeholder="https://..."></div>
+        <div><label class="block text-sm font-medium mb-1">Description</label>
+          <textarea name="description" rows="4" class="w-full border rounded-lg px-3 py-2"></textarea></div>
+        <p id="createError" class="hidden text-sm text-red-600"></p>
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" class="px-4 py-2 rounded border border-gray-300" onclick="MerchModal.hide()">Cancel</button>
+          <button id="createSubmit" type="submit" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white">Publish</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Edit Merch Modal -->
+  <div id="editModal" class="hidden fixed inset-0 z-50 w-full h-full flex items-center justify-center">
+    <div class="absolute inset-0 bg-black/60" onclick="EditModal.hide()"></div>
+    <div class="relative bg-white w-[92%] max-w-xl rounded-2xl border border-gray-200 shadow-xl p-6">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-2xl font-bold text-gray-900">Edit Merch</h3>
+        <button type="button" class="px-2 py-1 rounded hover:bg-gray-100" onclick="EditModal.hide()">✕</button>
+      </div>
+      <form id="editForm" class="space-y-4" novalidate>
+        <input type="hidden" name="id" id="edit-id">
+        <div><label class="block text-sm font-medium mb-1">Name</label>
+          <input name="name" id="edit-name" required class="w-full border rounded-lg px-3 py-2"></div>
+        <div><label class="block text-sm font-medium mb-1">Vendor</label>
+          <input name="vendor" id="edit-vendor" required class="w-full border rounded-lg px-3 py-2"></div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div><label class="block text-sm font-medium mb-1">Price</label>
+            <input type="number" min="0" name="price" id="edit-price" class="w-full border rounded-lg px-3 py-2"></div>
+          <div><label class="block text-sm font-medium mb-1">Stock</label>
+            <input type="number" min="0" name="stock" id="edit-stock" class="w-full border rounded-lg px-3 py-2"></div>
+        </div>
+        <div><label class="block text-sm font-medium mb-1">Thumbnail URL</label>
+          <input name="thumbnail" id="edit-thumbnail" class="w-full border rounded-lg px-3 py-2"></div>
+        <div><label class="block text-sm font-medium mb-1">Category</label>
+          <select name="category" id="edit-category" class="w-full border rounded-lg px-3 py-2">
+            <option value="jersey">Jersey</option>
+            <option value="jacket">Jacket</option>
+            <option value="hoodie">Hoodie</option>
+            <option value="cap">Cap</option>
+            <option value="scarf">Scarf</option>
+            <option value="keychain">Keychain</option>
+            <option value="others">Others</option>
+          </select></div>
+        <div><label class="block text-sm font-medium mb-1">Product Link</label>
+          <input name="link" id="edit-link" class="w-full border rounded-lg px-3 py-2"></div>
+        <div><label class="block text-sm font-medium mb-1">Description</label>
+          <textarea name="description" id="edit-description" rows="4" class="w-full border rounded-lg px-3 py-2"></textarea></div>
+        <p id="editError" class="hidden text-sm text-red-600"></p>
+        <div class="flex items-center justify-end gap-3 pt-2">
+          <button type="button" class="px-4 py-2 rounded border border-gray-300" onclick="EditModal.hide()">Cancel</button>
+          <button id="editSubmit" type="submit" class="px-4 py-2 rounded bg-red-600 hover:bg-red-700 text-white">Save Changes</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+</div>
+
+<!-- AJAX + Dropdown + Create/Edit/Delete + Sort -->
+<script>
+'use strict';
+
+/* ===== Utils ===== */
+function getCookie(name){ const m = document.cookie.match('(^|;)\\s*'+name+'\\s*=\\s*([^;]+)'); return m ? m.pop() : ''; }
+async function fetchText(url, opts={}){ const r=await fetch(url,opts);const t=await r.text(); if(!r.ok) throw new Error(t||('Error '+r.status)); return t; }
+async function postForm(url, fd){
+  const r = await fetch(url,{ method:'POST', headers:{'X-CSRFToken':getCookie('csrftoken'),'X-Requested-With':'XMLHttpRequest'}, body:fd });
+  const ct=r.headers.get('content-type')||''; if(!r.ok) throw new Error(ct.includes('application/json')?(await r.json()).detail||'Request failed':await r.text());
+  return ct.includes('application/json')? r.json() : r.text();
+}
+function formatRupiah(n){ try{return new Intl.NumberFormat('id-ID').format(Number(n||0));}catch{return String(n);} }
+const grid = document.getElementById('merch-grid');
+const loading = document.getElementById('merch-loading');
+
+/* ===== Reload ===== */
+async function reloadGrid(){
+  if(!grid){ location.reload(); return; }
+  try{
+    const html = await fetchText(location.href, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+    const dom = new DOMParser().parseFromString(html,'text/html');
+    const fresh = dom.getElementById('merch-grid');
+    if(fresh) grid.innerHTML = fresh.innerHTML;
+  }catch(e){ console.error(e); }
+}
+
+(function Filters(){
+  const catWrap = document.getElementById('cat-wrap');
+  const sortWrap = document.getElementById('sort-wrap');
+  if(!catWrap || !sortWrap) return;
+
+  const catBtn   = document.getElementById('cat-btn');
+  const sortBtn  = document.getElementById('sort-btn');
+  const catLabel = document.getElementById('cat-label');
+  const sortLabel= document.getElementById('sort-label');
+  const catMenu  = document.getElementById('cat-menu');
+  const sortMenu = document.getElementById('sort-menu');
+
+  const catNice  = { all:'All Merch', keychain:'Keychain', jersey:'Jersey', jacket:'Jacket', hoodie:'Hoodie', cap:'Cap', scarf:'Scarf', others:'Others' };
+  const sortNice = { recent:'Recently Added', price_asc:'Price: Low → High', price_desc:'Price: High → Low', popular:'Most Popular' };
+
+  const getParam = (url, key, dflt) => {
+    try { const u=new URL(url, location.origin); return u.searchParams.get(key) || dflt; }
+    catch { return dflt; }
+  };
+
+  const state = {
+    filter: getParam(location.href,'filter','all'),
+    sort:   getParam(location.href,'sort','recent')
+  };
+
+  function highlight(menuEl, key, valGetter){
+    menuEl.querySelectorAll('a').forEach(a=>{
+      const v = valGetter(a.href);
+      a.classList.toggle('bg-[#e11d2a]/10', v===key);
+      a.classList.toggle('font-semibold', v===key);
+    });
+  }
+
+  async function fetchAndSwap(url){
+    try{
+      loading?.classList.remove('hidden');
+      grid.style.opacity='0.5';
+
+      const html  = await fetchText(url, { headers:{'X-Requested-With':'XMLHttpRequest'} });
+      const dom   = new DOMParser().parseFromString(html,'text/html');
+      const fresh = dom.getElementById('merch-grid');
+      if (fresh) grid.innerHTML = fresh.innerHTML;
+
+      state.filter = getParam(url,'filter','all');
+      state.sort   = getParam(url,'sort','recent');
+      catLabel.textContent  = catNice[state.filter] ? `Filters: ${catNice[state.filter]}` : 'Filters';
+      sortLabel.textContent = `Sort by: ${sortNice[state.sort] || 'Recently Added'}`;
+      highlight(catMenu,  state.filter, href=>getParam(href,'filter','all'));
+      highlight(sortMenu, state.sort,   href=>getParam(href,'sort','recent'));
+
+      window.history.replaceState({}, '', url);
+    }catch(e){
+      console.error(e);
+    }finally{
+      loading?.classList.add('hidden');
+      grid.style.opacity='1';
+    }
+  }
+
+  catBtn?.addEventListener('click', ()=> catMenu.classList.toggle('hidden'));
+  sortBtn?.addEventListener('click',()=> sortMenu.classList.toggle('hidden'));
+  document.addEventListener('click', e=>{
+    if(!catWrap.contains(e.target))  catMenu.classList.add('hidden');
+    if(!sortWrap.contains(e.target)) sortMenu.classList.add('hidden');
+  });
+
+  catMenu?.addEventListener('click', e=>{
+    const a = e.target.closest('a[href]'); if(!a) return;
+    e.preventDefault();
+    catMenu.classList.add('hidden');
+    const selected = getParam(a.href,'filter','all');
+    const u = new URL(location.href);
+    u.searchParams.set('filter', selected);
+    u.searchParams.set('sort',   state.sort);
+    fetchAndSwap(u.href);
+  });
+
+  sortMenu?.addEventListener('click', e=>{
+    const a = e.target.closest('a[href]'); if(!a) return;
+    e.preventDefault();
+    sortMenu.classList.add('hidden');
+    const selected = getParam(a.href,'sort','recent');
+    const u = new URL(location.href);
+    u.searchParams.set('filter', state.filter);
+    u.searchParams.set('sort',   selected);
+    fetchAndSwap(u.href);
+  });
+
+  catLabel.textContent  = catNice[state.filter] ? `Filters: ${catNice[state.filter]}` : 'Filters';
+  sortLabel.textContent = `Sort by: ${sortNice[state.sort] || 'Recently Added'}`;
+  highlight(catMenu,  state.filter, href=>getParam(href,'filter','all'));
+  highlight(sortMenu, state.sort,   href=>getParam(href,'sort','recent'));
+})();
+
+/* ===== Create Form ===== */
+const MerchModal = (function(){
+  const modal = document.getElementById('createModal'); if(!modal) return {show(){},hide(){}};
+  const form = document.getElementById('createForm'); const err = document.getElementById('createError'); const btn=document.getElementById('createSubmit');
+  function show(){ modal.classList.remove('hidden'); setTimeout(()=>form.querySelector('input[name="name"]')?.focus(),0); }
+  function hide(){ modal.classList.add('hidden'); form.reset(); err.classList.add('hidden'); err.textContent=''; }
+  form?.addEventListener('submit', async e=>{
+    e.preventDefault(); err.classList.add('hidden'); err.textContent=''; btn.disabled=true; btn.textContent='Publishing...';
+    try{ await postForm("{% url 'merch:create_merch' %}", new FormData(form)); hide(); await reloadGrid(); }
+    catch(er){ err.textContent=String(er.message||er).slice(0,300); err.classList.remove('hidden'); }
+    finally{ btn.disabled=false; btn.textContent='Publish'; }
+  });
+  document.addEventListener('keydown', ev=>{ if(ev.key==='Escape' && !modal.classList.contains('hidden')) hide(); });
+  return { show, hide };
+})();
+
+/* ===== Edit Form ===== */
+const EditModal = (function(){
+  const modal=document.getElementById('editModal'); if(!modal) return {show(){},hide(){}};
+  const form=document.getElementById('editForm'), err=document.getElementById('editError'), btn=document.getElementById('editSubmit');
+  const $ = id=>document.getElementById(id);
+  const F={ id:$('edit-id'), name:$('edit-name'), vendor:$('edit-vendor'), price:$('edit-price'), stock:$('edit-stock'), thumbnail:$('edit-thumbnail'), category:$('edit-category'), link:$('edit-link'), description:$('edit-description') };
+  let current={ id:null, url:null };
+  function show(p){ current={id:p.id,url:p.url}; F.id.value=p.id; F.name.value=p.name||''; F.vendor.value=p.vendor||''; F.price.value=p.price??''; F.stock.value=p.stock??''; F.thumbnail.value=p.thumbnail||''; F.category.value=(p.category||'others').toLowerCase(); F.link.value=p.link||''; F.description.value=p.description||''; err.classList.add('hidden'); err.textContent=''; modal.classList.remove('hidden'); setTimeout(()=>F.name.focus(),0); }
+  function hide(){ modal.classList.add('hidden'); }
+  form?.addEventListener('submit', async e=>{
+    e.preventDefault(); btn.disabled=true; btn.textContent='Saving...'; err.classList.add('hidden'); err.textContent='';
+    try{
+      const data = await postForm(current.url, new FormData(form));
+      // Update inline card if still visible on page
+      const card=document.getElementById('merch-card-'+data.id);
+      if(card){ card.querySelector('.merch-name').textContent=data.name; card.querySelector('.merch-vendor').textContent=data.vendor; card.querySelector('.merch-category').textContent=(data.category||'').replace(/^./,c=>c.toUpperCase()); card.querySelector('.merch-price').textContent=formatRupiah(data.price); const img=card.querySelector('img'); if(img && data.thumbnail) img.src=data.thumbnail; }
+      hide();
+    }catch(er){ err.textContent=String(er.message||er).slice(0,300); err.classList.remove('hidden'); }
+    finally{ btn.disabled=false; btn.textContent='Save Changes'; }
+  });
+  return { show, hide };
+})();
+
+/* ===== Edit/Delete ===== */
+grid?.addEventListener('click', async (e)=>{
+  const delBtn=e.target.closest('[data-action="delete"]');
+  const editBtn=e.target.closest('[data-action="edit"]');
+
+  if(delBtn){
+    e.preventDefault();
+    if(!confirm('Delete this merch?')) return;
+    try{ await postForm(delBtn.dataset.url, new FormData()); delBtn.closest('article')?.remove(); }
+    catch(er){ console.error(er); alert(/403/.test(String(er)) ? 'Forbidden: hanya admin.' : 'Gagal menghapus item.'); }
+    return;
+  }
+
+  if(editBtn){
+    e.preventDefault();
+    EditModal.show({
+      id: editBtn.dataset.id, url: editBtn.dataset.url, name: editBtn.dataset.name, vendor: editBtn.dataset.vendor,
+      price: editBtn.dataset.price, stock: editBtn.dataset.stock, thumbnail: editBtn.dataset.thumbnail,
+      category: editBtn.dataset.category, link: editBtn.dataset.link, description: editBtn.dataset.description
+    });
+  }
+});
+</script>
+
+{% endblock content %}

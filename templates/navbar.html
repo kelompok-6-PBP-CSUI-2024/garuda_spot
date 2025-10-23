@@ -1,0 +1,50 @@
+{% load static %}
+
+<header class="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200/70 shadow-sm">
+  <div class="max-w-7xl mx-auto h-14 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    <a href="{% url 'news:show_main' %}" class="flex items-center gap-2">
+      <img src="{% static 'image/logo_top.png' %}" alt="Garuda Spot" class="h-7 w-7"/>
+      <span class="text-lg sm:text-xl font-extrabold tracking-tight">Garuda <span class="font-semibold">Spot</span></span>
+    </a>
+
+    <div class="flex items-center gap-4">
+      {% if request.user.is_authenticated %}
+        <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
+          {% csrf_token %}
+          <button type="submit"
+                  class="nav-bottom-link text-gray-700 hover:text-red-700 px-0 py-0 bg-transparent border-0 focus:outline-none">
+            Logout{% if request.user.username %} {{ request.user.username }}{% endif %}
+          </button>
+        </form>
+      {% else %}
+        <a href="{% url 'accounts:login' %}" class="nav-bottom-link text-gray-700 hover:text-red-700">
+          Login
+        </a>
+      {% endif %}
+    </div>
+  </div>
+</header>
+
+<nav class="fixed bottom-0 inset-x-0 z-50 bg-red-700 text-white border-t border-red-800">
+  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="h-16 flex items-center justify-between">
+      <div class="text-base sm:text-lg font-extrabold tracking-wide">
+        <span class="hidden sm:inline">Garuda Spot</span>
+        <span class="sm:hidden">GarudaSpot</span>
+      </div>
+      <ul class="flex items-center text-[13px] sm:text-[14px] font-medium gap-2 sm:gap-3">
+        <li><a class="nav-bottom-link" href="{% url 'news:show_main' %}">News</a></li>
+        <li class="sep">|</li>
+        <li><a class="nav-bottom-link" href="">Player</a></li>
+        <li class="sep">|</li>
+        <li><a class="nav-bottom-link" href="">Forum</a></li>
+        <li class="sep">|</li>
+        <li><a class="nav-bottom-link" href="">Ticket</a></li>
+        <li class="sep">|</li>
+        <li><a class="nav-bottom-link" href="{% url 'merch:show_merch' %}">Merch</a></li>
+        <li class="sep">|</li>
+        <li><a class="nav-bottom-link" href="">Schedule</a></li>
+      </ul>
+    </div>
+  </div>
+</nav>
