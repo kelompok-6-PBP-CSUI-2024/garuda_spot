@@ -19,6 +19,7 @@ class Merch(models.Model):
     thumbnail = models.URLField(blank=True, default='')
     category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='others')
     link = models.URLField(blank=True, default='')
+    view_count = models.PositiveIntegerField(default=0) 
     
     def __str__(self):
         return self.name
