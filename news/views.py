@@ -12,7 +12,6 @@ from django.contrib.auth.decorators import login_required
 from .forms import NewsForm
 from .models import News
 
-@login_required
 def show_main(request):
     news_list = News.objects.all()
     return render(request, "main.html", {"news_list": news_list})
@@ -34,7 +33,6 @@ def create_news(request):
         form.save()
         return redirect('news:show_main')
     return render(request, "create_news.html", {"form": form})
-
 
 @login_required
 def edit_news(request, id):
