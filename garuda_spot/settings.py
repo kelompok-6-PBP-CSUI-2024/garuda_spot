@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     'news',
     'merch',
     'accounts',
+    'squad',
     'ticket',
     'forum'
 ]

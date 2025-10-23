@@ -22,6 +22,7 @@ urlpatterns = [
     path("", include("news.urls", namespace="news")),
     path("accounts/", include("accounts.urls", namespace="accounts")),
     path("merch/", include("merch.urls", namespace="merch")),
+    path("squad/", include("squad.urls", namespace="squad")),
     path("tickets/", include("ticket.urls", namespace="tickets")),
     path("forum/", include("forum.urls", namespace="forum")),
 ]

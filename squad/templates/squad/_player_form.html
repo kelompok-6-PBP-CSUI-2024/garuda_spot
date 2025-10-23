@@ -1,0 +1,102 @@
+<form id="player-form"
+      method="post"
+      data-submit-url="{{ submit_url }}"
+      class="space-y-6">
+  {% csrf_token %}
+
+  <h3 class="text-lg font-bold text-slate-900">{{ title|default:"Tambah Pemain" }}</h3>
+  <div data-error class="hidden text-sm text-red-600"></div>
+
+  <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <!-- Nama & Foto -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Nama</label>
+      <input name="name" required
+             value="{{ p.name|default_if_none:'' }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Foto (URL)</label>
+      <input type="url" name="photo_url"
+             value="{{ p.photo_url|default_if_none:'' }}"
+             class="w-full border rounded-lg px-3 py-2" placeholder="https://...">
+    </div>
+
+    <!-- Tanggal lahir & Tinggi -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Tanggal lahir</label>
+      <input type="date" name="birth_date"
+             value="{{ p.birth_date|date:'Y-m-d' }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Tinggi (cm)</label>
+      <input type="number" min="0" name="height_cm"
+             value="{{ p.height_cm|default_if_none:'' }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+
+    <!-- Posisi 1-3 -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Position 1</label>
+      <select name="position1" class="w-full border rounded-lg px-3 py-2">
+        {% for val,label in POS_CHOICES %}
+          <option value="{{ val }}" {% if p and p.position1 == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Position 2</label>
+      <select name="position2" class="w-full border rounded-lg px-3 py-2">
+        {% for val,label in POS_CHOICES %}
+          <option value="{{ val }}" {% if p and p.position2 == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Position 3</label>
+      <select name="position3" class="w-full border rounded-lg px-3 py-2">
+        {% for val,label in POS_CHOICES %}
+          <option value="{{ val }}" {% if p and p.position3 == val %}selected{% endif %}>{{ label }}</option>
+        {% endfor %}
+      </select>
+    </div>
+
+    <!-- Klub & statistik -->
+    <div>
+      <label class="block text-sm font-medium mb-1">Klub saat ini</label>
+      <input name="club" value="{{ p.club|default_if_none:'' }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Penampilan di timnas (caps)</label>
+      <input type="number" min="0" name="caps"
+             value="{{ p.caps|default_if_none:0 }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Goal di timnas</label>
+      <input type="number" min="0" name="goals"
+             value="{{ p.goals|default_if_none:0 }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+    <div>
+      <label class="block text-sm font-medium mb-1">Assist di timnas</label>
+      <input type="number" min="0" name="assists"
+             value="{{ p.assists|default_if_none:0 }}"
+             class="w-full border rounded-lg px-3 py-2">
+    </div>
+  </div>
+
+  <div class="flex justify-end gap-2">
+    <button type="submit"
+            class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-semibold"
+            onclick="submitPlayerForm(event)">
+      Simpan
+    </button>
+    <button type="button" class="border border-slate-300 px-4 py-2 rounded-xl font-semibold"
+            data-close onclick="hideModal()">
+      Batalkan
+    </button>
+  </div>
+</form>
