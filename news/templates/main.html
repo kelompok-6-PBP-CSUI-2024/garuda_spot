@@ -2,127 +2,112 @@
 {% load static %}
 
 {% block content %}
-{# --- PAGE HEADER (hero) --- #}
-<section class="relative w-full select-none">
-  <div class="absolute inset-0 -z-10">
-    <img src="{% static 'image/background.png' %}" alt="" class="w-full h-full object-cover opacity-40">
-    <div class="absolute inset-0 bg-gradient-to-b from-white/70 to-red-50/60"></div>
+<section class="relative w-full select-none min-h-[20vh] sm:min-h-[22vh] md:min-h-[26vh] lg:min-h-[28vh] mb-8">
+  <div
+    class="absolute inset-0 -z-10 bg-center bg-cover"
+    style="background-image:url('{% static "image/background.png" %}');">
   </div>
+  <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white/85 to-red-50/60"></div>
 
-  <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 sm:py-14">
-    <div class="text-center">
-      <p class="uppercase tracking-[0.35em] text-xs sm:text-sm text-gray-500 mb-3">Garuda Spot</p>
+  <div class="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="h-full flex flex-col items-center justify-center text-center py-6 sm:py-7">
+      <p class="uppercase tracking-[0.35em] text-[10px] sm:text-xs text-gray-500 mb-2">Garuda Spot</p>
+      <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900">BERITA TERKINI</h1>
+      <div class="mx-auto mt-2 h-[3px] w-20 rounded-full bg-red-600"></div>
+      <p class="mt-2 text-xs sm:text-sm text-gray-600">Berita terbaru sepak bola Indonesia</p>
 
-      <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight text-gray-900">
-        BERITA TERKINI
-      </h1>
-
-      <div class="mx-auto mt-4 h-[3px] w-24 rounded-full bg-red-600"></div>
-
-      <p class="mt-4 text-sm sm:text-base text-gray-600">
-        Berita terbaru sepak bola Indonesia
-      </p>
+      {% if request.user.is_authenticated and request.user.is_admin %}
+      <button id="open-add-news"
+              class="mt-4 inline-flex items-center justify-center px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/50">
+        Add News
+      </button>
+      {% endif %}
     </div>
   </div>
 </section>
 
-<div class="flex items-center justify-between mb-4">
-  <div>
-    {% if request.user.is_authenticated and request.user.is_admin %}
-
-      <button id="open-add-news"
-              class="inline-block px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">
-        Add News
-      </button>
-    {% endif %}
-  </div>
-
-  <div>
-    {% if request.user.is_authenticated %}
-      <form method="post" action="{% url 'accounts:logout' %}" class="inline">
-        {% csrf_token %}
-        <button type="submit" class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">
-          Logout {{ request.user.username }}
-        </button>
-      </form>
-    {% else %}
-      <a href="{% url 'accounts:login' %}"
-         class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Login</a>
-      <a href="{% url 'accounts:register' %}"
-         class="ml-2 px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700">Register</a>
-    {% endif %}
-  </div>
-</div>
-
-<div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
+<div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
   <p class="text-gray-600">Loading news…</p>
 </div>
-<div id="error" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
+<div id="error" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
   <p class="text-red-600">Failed to load news.</p>
 </div>
-<div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
+<div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
   <p class="text-gray-600">No news yet.</p>
 </div>
-<div id="grid" style="display:none"></div>
+
+<div id="grid" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-6">
+  {% for news in news_list %}
+    <article class="bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden">
+      <div class="p-5">
+        <div class="text-sm text-gray-500 mb-2">
+          <span class="px-2 py-0.5 rounded-md bg-red-50 text-red-700 border border-red-200">{{ news.category }}</span>
+          <span class="mx-2">•</span>
+          <time>{{ news.publish_date }}</time>
+        </div>
+        <h3 class="text-lg font-semibold text-gray-900 mb-3 leading-tight">
+          <a href="{% url 'news:show_news' news.id %}" class="hover:text-red-600 transition-colors">{{ news.title }}</a>
+        </h3>
+        <p class="text-gray-600 text-sm leading-relaxed mb-4">{{ news.content|truncatewords:26 }}</p>
+        <div class="pt-3 border-t border-gray-100 flex items-center justify-between">
+          <a href="{% url 'news:show_news' news.id %}" class="text-red-600 hover:text-red-700 font-medium text-sm">Read more →</a>
+          {% if request.user.is_authenticated and request.user.is_admin %}
+            <button type="button"
+                    data-delete-id="{{ news.id }}"
+                    class="px-2 py-1 text-sm rounded border border-red-300 text-red-700 hover:bg-red-50">
+              Delete
+            </button>
+          {% endif %}
+        </div>
+      </div>
+    </article>
+  {% empty %}
+    <div class="col-span-1">
+      <div class="bg-white rounded-lg border border-gray-200 p-12 text-center">No news yet.</div>
+    </div>
+  {% endfor %}
+</div>
 
 {% if request.user.is_authenticated and request.user.is_admin %}
-<div id="add-news-modal"
-     class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center">
+<div id="add-news-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center">
   <div class="absolute inset-0 bg-black/50" data-close-modal></div>
-
   <div class="relative w-full sm:max-w-lg bg-white rounded-t-2xl sm:rounded-2xl shadow-xl p-6">
     <div class="flex items-center justify-between mb-4">
       <h3 class="text-lg font-semibold">Add News</h3>
       <button class="text-gray-500 hover:text-gray-700" data-close-modal>&times;</button>
     </div>
-
     <form id="add-news-form" class="space-y-4">
-        {% csrf_token %}
+      {% csrf_token %}
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Title</label>
+        <input name="title" type="text" required
+               class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"/>
+      </div>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
-            <label class="block text-sm font-medium text-gray-700">Title</label>
-            <input name="title" type="text" required
-                class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2
-                        focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"/>
+          <label class="block text-sm font-medium text-gray-700">Category</label>
+          <input name="category" type="text" required
+                 class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"/>
         </div>
-
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-            <label class="block text-sm font-medium text-gray-700">Category</label>
-            <input name="category" type="text" required
-                    class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2
-                            focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"/>
-            </div>
-            <div>
-            <label class="block text-sm font-medium text-gray-700">Publish date</label>
-            <input name="publish_date" type="text" placeholder="e.g. 12 Oct 2025"
-                    class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2
-                            focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"/>
-            </div>
-        </div>
-
         <div>
-            <label class="block text-sm font-medium text-gray-700">Content</label>
-            <textarea name="content" rows="5" required
-                    class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2
-                            focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"></textarea>
-            
+          <label class="block text-sm font-medium text-gray-700">Publish date</label>
+          <input name="publish_date" type="text" placeholder="e.g. 12 Oct 2025"
+                 class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"/>
         </div>
-        <div class="flex items-center justify-between pt-2">
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Content</label>
+        <textarea name="content" rows="5" required
+                  class="mt-1 w-full rounded-md border border-gray-300 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-red-600 focus:border-red-600"></textarea>
+      </div>
+      <div class="flex items-center justify-between pt-2">
         <p id="add-news-error" class="text-sm text-red-600 hidden"></p>
         <div class="ml-auto space-x-2">
-            <button type="button" data-close-modal
-                    class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
-            Cancel
-            </button>
-            <button id="add-news-submit" type="submit"
-                    class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">
-            Add News
-            </button>
+          <button type="button" data-close-modal class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">Cancel</button>
+          <button id="add-news-submit" type="submit" class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">Add News</button>
         </div>
-        </div>
-
-        </form>
-
+      </div>
+    </form>
   </div>
 </div>
 {% endif %}
@@ -132,7 +117,6 @@
   const ADD_NEWS_ENDPOINT = "{% url 'news:add_news_entry_ajax' %}";
   const DELETE_URL_TEMPLATE = "{% url 'news:delete_news_ajax' '00000000-0000-0000-0000-000000000000' %}";
   const IS_ADMIN = {% if request.user.is_authenticated and request.user.is_admin %}true{% else %}false{% endif %};
-
 
   const loadingSpinner = document.getElementById('loading');
   const errorMessage = document.getElementById('error');
@@ -145,13 +129,12 @@
   const submitBtn = document.getElementById('add-news-submit');
   const errText = document.getElementById('add-news-error');
 
-  function setVis(el, show) { if (el) el.style.display = show ? '' : 'none'; }
-  function displayPageSection({ showLoading=false, showError=false, showEmpty=false, showGrid=false }) {
+  function setVis(el, show) { if (el) el.classList[show ? 'remove' : 'add']('hidden'); }
+  function displayPageSection({ showLoading=false, showError=false, showEmpty=false, showGrid=true }) {
     setVis(loadingSpinner, showLoading);
     setVis(errorMessage, showError);
     setVis(emptyStateDisplay, showEmpty);
-    setVis(newsGridContainer, showGrid);
-    if (showGrid && newsGridContainer) newsGridContainer.className = 'grid grid-cols-1 gap-6';
+    newsGridContainer.style.display = showGrid ? '' : 'none';
   }
   function getCookie(name) {
     const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
@@ -159,6 +142,7 @@
   }
   function openModal(){ if (modal){ modal.classList.remove('hidden'); modal.classList.add('flex'); } }
   function closeModal(){ if (modal){ modal.classList.add('hidden'); modal.classList.remove('flex'); errText?.classList.add('hidden'); errText.textContent=''; form?.reset(); } }
+
   function buildNewsCardElement(item) {
     const article = document.createElement('article');
     article.className = 'bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden';
@@ -184,19 +168,18 @@
     readMore.textContent = 'Read more →'; footer.appendChild(readMore);
 
     if (IS_ADMIN) {
-        const del = document.createElement('button');
-        del.type = 'button';
-        del.dataset.deleteId = item.id;
-        del.className = 'px-2 py-1 text-sm rounded border border-red-300 text-red-700 hover:bg-red-50';
-        del.textContent = 'Delete';
-        footer.appendChild(del);
+      const del = document.createElement('button');
+      del.type = 'button';
+      del.dataset.deleteId = item.id;
+      del.className = 'px-2 py-1 text-sm rounded border border-red-300 text-red-700 hover:bg-red-50';
+      del.textContent = 'Delete';
+      footer.appendChild(del);
     }
 
     wrapper.append(meta, h3, p, footer);
     article.appendChild(wrapper);
     return article;
-    }
-
+  }
 
   function renderAllNewsCards(items) {
     newsGridContainer.innerHTML = '';
@@ -205,29 +188,30 @@
 
   async function fetchNewsFromServer() {
     try {
-      displayPageSection({ showLoading: true });
+      displayPageSection({ showLoading: true, showGrid: false });
       const res = await fetch(NEWS_API_ENDPOINT, { headers: { Accept: 'application/json' }});
       if (!res.ok) throw new Error('HTTP ' + res.status);
-      const data = await res.json();
-      const items = Array.isArray(data) ? data : [];
-      if (items.length === 0) displayPageSection({ showEmpty: true });
-      else { renderAllNewsCards(items); displayPageSection({ showGrid: true }); }
+      const items = await res.json();
+      if (!Array.isArray(items) || items.length === 0) {
+        displayPageSection({ showEmpty: true, showGrid: false });
+      } else {
+        renderAllNewsCards(items);
+        displayPageSection({ showGrid: true });
+      }
     } catch (e) {
-      console.error('News fetch error:', e);
-      displayPageSection({ showError: true });
+      displayPageSection({ showError: true, showGrid: false });
     }
   }
 
   if (openBtn && modal && form) {
     openBtn.addEventListener('click', openModal);
-    modal.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
+    document.querySelectorAll('[data-close-modal]').forEach(el => el.addEventListener('click', closeModal));
     modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       errText.classList.add('hidden'); errText.textContent = '';
       submitBtn.disabled = true;
-
       try {
         const fd = new FormData(form);
         const res = await fetch(ADD_NEWS_ENDPOINT, {
@@ -235,12 +219,10 @@
           headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
           body: fd
         });
-
         if (!res.ok) {
           const data = await res.json().catch(() => ({}));
           throw new Error(data.error || `HTTP ${res.status}`);
         }
-
         closeModal();
         await fetchNewsFromServer();
       } catch (err) {
@@ -251,6 +233,7 @@
       }
     });
   }
+
   newsGridContainer.addEventListener('click', async (e) => {
     const btn = e.target.closest('button[data-delete-id]');
     if (!btn) return;
@@ -258,18 +241,17 @@
     const url = DELETE_URL_TEMPLATE.replace('00000000-0000-0000-0000-000000000000', id);
     btn.disabled = true;
     try {
-        const res = await fetch(url, {
+      const res = await fetch(url, {
         method: 'POST',
         headers: { 'X-CSRFToken': getCookie('csrftoken') || '' },
-        });
-        if (!res.ok) throw new Error('HTTP ' + res.status);
-        await fetchNewsFromServer();
-    } catch (err) {
-        btn.disabled = false;
-        alert('Delete failed: ' + (err.message || 'error'));
+      });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      await fetchNewsFromServer();
+    } catch {
+      btn.disabled = false;
+      alert('Delete failed');
     }
-    });
-
+  });
 
   document.addEventListener('DOMContentLoaded', fetchNewsFromServer);
 </script>
