@@ -111,7 +111,8 @@
         {% endfor %}
       </div>
 
-      <button id="load-more" 
+      <button id="load-more"
+              type="button"
               class="loadmore block my-5 mx-auto border border-gray-300 px-4 py-2 rounded-sm bg-white cursor-pointer hover:bg-gray-50 font-medium text-gray-700"
               {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
         Load More
@@ -125,164 +126,161 @@
   BLOCK INI MENAMBAHKAN JAVASCRIPT KE HALAMAN
 #}
 {% block body_end %}
-  <script>
-  (function(){
-    function getCookie(name){
-      const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
-      return m ? m.pop() : '';
-    }
-    const csrftoken = getCookie('csrftoken'); 
+<script>
+(function(){
+  function getCookie(name){
+    const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+    return m ? m.pop() : '';
+  }
+  const csrftoken = getCookie('csrftoken'); 
+  const listEl = document.getElementById('post-list');
+  const loadBtn = document.getElementById('load-more');
+  const qEl = document.getElementById('q');
+  const catInput = document.getElementById('category');
+  const postForm = document.getElementById('post-create-form');
+  const postMsg = document.getElementById('post-create-msg');
+  const wrapper = document.getElementById('forum-wrapper'); 
+  const initialPageAttr = wrapper.getAttribute('data-initial-page');
+  let page = parseInt(initialPageAttr || '1', 10);
 
-    const listEl = document.getElementById('post-list');
-    const loadBtn = document.getElementById('load-more');
-    const qEl = document.getElementById('q');
-    const catInput = document.getElementById('category');
-    const postForm = document.getElementById('post-create-form');
-    const postMsg = document.getElementById('post-create-msg');
-    const wrapper = document.getElementById('forum-wrapper'); 
-    const initialPageAttr = wrapper.getAttribute('data-initial-page');
-    let page = parseInt(initialPageAttr || '1', 10);
+  function fetchList(opts={}){
+    const params = new URLSearchParams({
+      page: opts.page || 1,
+      q: qEl.value || '',
+      category: catInput.value || 'all'
+    });
+    const url = "{% url 'forum:post_list_partial' %}?" + params.toString();
+    return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+      .then(r => r.json());
+  }
 
-    function fetchList(opts={}){
-      const params = new URLSearchParams({
-        page: opts.page || 1,
-        q: qEl.value || '',
-        category: catInput.value || 'all'
-      });
-      const url = "{% url 'forum:post_list_partial' %}?" + params.toString();
-      return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
-        .then(r => r.json());
-    }
-    
-    function render(html, append=false){
-      if (!append) {
-          if (!html.trim()) {
-              listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
-          } else {
-              listEl.innerHTML = html;
-          }
-      } else { 
-          const emptyMsg = listEl.querySelector('.muted');
-          if (emptyMsg) emptyMsg.remove();
-          
-          if (opts.prepend) {
-            listEl.insertAdjacentHTML('afterbegin', html);
-          } else {
-            listEl.insertAdjacentHTML('beforeend', html);
-          }
+  function renderPosts(html, mode = 'replace') {
+    const emptyMsg = listEl.querySelector('.muted');
+    if (emptyMsg) emptyMsg.remove();
+
+    if (mode === 'replace') {
+      if (!html.trim()) {
+        listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
+      } else {
+        listEl.innerHTML = html;
       }
+    } else if (mode === 'append') {
+      listEl.insertAdjacentHTML('beforeend', html);
+    } else if (mode === 'prepend') {
+      listEl.insertAdjacentHTML('afterbegin', html);
     }
+  }
 
-    function renderPosts(html, mode = 'replace') {
-        const emptyMsg = listEl.querySelector('.muted');
-        if (emptyMsg) emptyMsg.remove();
+  function hideLoadMore() {
+    loadBtn.style.display = 'none';
+  }
 
-        if (mode === 'replace') {
-            if (!html.trim()) {
-                listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
-            } else {
-                listEl.innerHTML = html;
-            }
-        } else if (mode === 'append') {
-            listEl.insertAdjacentHTML('beforeend', html);
-        } else if (mode === 'prepend') {
-            listEl.insertAdjacentHTML('afterbegin', html);
+  function showLoadMore() {
+    loadBtn.style.display = 'block';
+  }
+  listEl.addEventListener('click', function(e){
+    const btn = e.target.closest('.btn-like');
+    if (!btn) return;
+    const card = btn.closest('.card');
+    const slug = card?.dataset?.slug;
+    if (!slug) return;
+    fetch(`{% url 'forum:post_like' 'SLUG_PLACEHOLDER' %}`.replace('SLUG_PLACEHOLDER', slug), {
+      method: 'POST',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrftoken }
+    })
+    .then(r => r.json())
+    .then(data => {
+      if (!data.ok) return;
+      const countEl = card.querySelector('.like-count');
+      if (countEl) countEl.textContent = data.like_count;
+      btn.classList.toggle('liked', data.liked);
+    })
+    .catch(() => {});
+  });
+
+  postForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    postMsg.textContent = 'Mengirim…';
+    const formData = new FormData(postForm);
+    
+    fetch("{% url 'forum:post_create' %}", {
+      method: 'POST',
+      headers: {'X-Requested-With':'XMLHttpRequest'}, 
+      body: formData
+    }).then(r=>r.json())
+      .then(data=>{
+        if(data.ok && data.html){
+          renderPosts(data.html, 'prepend');
+          postForm.reset();
+          postMsg.textContent = 'Terkirim!';
+          setTimeout(()=>postMsg.textContent='', 1200);
+        }else{
+          postMsg.textContent = 'Gagal: ' + (data.errors ? JSON.stringify(data.errors) : 'Error');
         }
-    }
+      }).catch(()=> postMsg.textContent = 'Gagal jaringan');
+  });
 
-    
-    function updateLoadMore(show){ loadBtn.hidden = !show; }
-
-    listEl.addEventListener('click', function(e){
-      const btn = e.target.closest('.btn-like');
-      if (!btn) return;
-      const card = btn.closest('.card');
-      const slug = card?.dataset?.slug;
-      if (!slug) return;
-      fetch(`{% url 'forum:post_like' 'SLUG_PLACEHOLDER' %}`.replace('SLUG_PLACEHOLDER', slug), {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrftoken }
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok) return;
-        const countEl = card.querySelector('.like-count');
-        if (countEl) countEl.textContent = data.like_count;
-        if (data.liked) btn.classList.add('liked');
-        else btn.classList.remove('liked');
-      })
-      .catch(() => {});
-    });
-
-    postForm.addEventListener('submit', (e)=>{
+  document.querySelectorAll('.js-cat').forEach(a => {
+    a.addEventListener('click', (e) => {
       e.preventDefault();
-      postMsg.textContent = 'Mengirim…';
-      const formData = new FormData(postForm);
+      document.querySelectorAll('.js-cat').forEach(x => x.classList.remove('font-bold', 'underline', 'bg-red-800/50'));
+      a.classList.add('font-bold', 'underline', 'bg-red-800/50');
       
-      fetch("{% url 'forum:post_create' %}", {
-        method: 'POST',
-        headers: {'X-Requested-With':'XMLHttpRequest'}, 
-        body: formData
-      }).then(r=>r.json())
-        .then(data=>{
-          if(data.ok && data.html){
-            renderPosts(data.html, 'prepend');
-            postForm.reset();
-            postMsg.textContent = 'Terkirim!';
-            setTimeout(()=>postMsg.textContent='', 1200);
-          }else{
-            postMsg.textContent = 'Gagal: ' + (data.errors ? JSON.stringify(data.errors) : 'Error');
-          }
-        }).catch(()=> postMsg.textContent = 'Gagal jaringan');
-    });
-
-    document.querySelectorAll('.js-cat').forEach(a => {
-      a.addEventListener('click', (e) => {
-        e.preventDefault();
-        document.querySelectorAll('.js-cat').forEach(x => {
-            x.classList.remove('font-bold', 'underline', 'bg-red-800/50');
-        });
-        a.classList.add('font-bold', 'underline', 'bg-red-800/50');
-        
-        catInput.value = a.dataset.cat;
-        page = 1;
-        fetchList({page}).then(({html, has_next}) => {
-          renderPosts(html, 'replace'); 
-          updateLoadMore(Boolean(has_next));
-          history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
-        });
-      });
-    });
-
-    let t;
-    qEl.addEventListener('input', ()=>{
-      clearTimeout(t);
-      t = setTimeout(()=>{
-        page = 1;
-        fetchList({page}).then(({html, has_next}) => {
-          renderPosts(html, 'replace');
-          updateLoadMore(Boolean(has_next));
-          history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
-        });
-      }, 320);
-    });
-
-    loadBtn.addEventListener('click', ()=>{
-      page += 1;
-      loadBtn.disabled = true;
-      loadBtn.textContent = 'Memuat...';
+      catInput.value = a.dataset.cat;
+      page = 1;
       fetchList({page}).then(({html, has_next}) => {
-        renderPosts(html, 'append');
-        updateLoadMore(Boolean(has_next));
-      }).catch(()=>{ 
-        page -= 1; 
-      }).finally(() => {
-        loadBtn.disabled = false;
-        loadBtn.textContent = 'Muat lebih banyak';
+        renderPosts(html, 'replace'); 
+        if (has_next) showLoadMore(); else hideLoadMore();
+        history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
       });
     });
-    updateLoadMore(wrapper.getAttribute('data-has-next') === 'true');
-    
-  })();
-  </script>
+  });
+
+  let t;
+  qEl.addEventListener('input', ()=>{
+    clearTimeout(t);
+    t = setTimeout(()=>{
+      page = 1;
+      fetchList({page}).then(({html, has_next}) => {
+        renderPosts(html, 'replace');
+        if (has_next) showLoadMore(); else hideLoadMore();
+        history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
+      });
+    }, 320);
+  });
+
+  let loadingMore = false;
+  const ORIGINAL_LOAD_LABEL = 'Load More';
+
+  loadBtn.addEventListener('click', () => {
+    if (loadingMore) return;
+    loadingMore = true;
+    const nextPage = page + 1;
+
+    loadBtn.disabled = true;
+    loadBtn.textContent = 'Loading...';
+
+    fetchList({ page: nextPage })
+      .then(({ html, has_next }) => {
+        renderPosts(html, 'append');
+        page = nextPage;
+        if (has_next) showLoadMore(); else hideLoadMore();
+      })
+      .catch(() => {
+        console.warn('Gagal ambil halaman berikutnya');
+      })
+      .finally(() => {
+        loadingMore = false;
+        loadBtn.disabled = false;
+        loadBtn.textContent = ORIGINAL_LOAD_LABEL;
+      });
+  });
+
+  if (wrapper.getAttribute('data-has-next') === 'true') {
+    showLoadMore();
+  } else {
+    hideLoadMore();
+  }
+})();
+</script>
 {% endblock body_end %}
