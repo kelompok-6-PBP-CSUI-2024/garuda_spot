@@ -1,5 +1,16 @@
 from django import forms
 from .models import TicketMatch, TicketLink
+import re
+
+_SCHEME_RE = re.compile(r'^[a-zA-Z][a-zA-Z0-9+\-.]*://')
+
+def _normalize_url(u: str) -> str:
+    if not u:
+        return u
+    u = u.strip()
+    if not _SCHEME_RE.match(u):
+        return 'https://' + u
+    return u
 
 
 class TicketMatchForm(forms.ModelForm):
