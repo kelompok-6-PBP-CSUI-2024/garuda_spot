@@ -120,43 +120,68 @@
     }catch(err){ alert(err.message||err); }
   }
 
-  // ========== FILTER ==========
-  // Kelas-kelas styling dari jawaban sebelumnya
-  const activeClasses = ['border-red-700', 'font-semibold', 'text-gray-900'];
-  const inactiveClasses = ['border-transparent', 'font-normal', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700'];
+// ========== ROLE FILTER  ==========
+const ACTIVE_PILL   = ['text-red-700', 'border-red-600', 'font-semibold'];
+const INACTIVE_PILL = ['text-gray-500', 'border-gray-200', 'font-normal'];
 
-  function filterByRole(clickedButton) {
-    // 1. Ambil role dari tombol yang diklik
-    const role = clickedButton?.dataset.role;
-    if (!role) return; // Keluar jika tombol tidak punya data-role
+let currentRole = null;
 
-    // 2. Dapatkan semua tombol filter dan semua grup konten
-    const allButtons = document.querySelectorAll("#role-filter .pill");
-    const allGroups = document.querySelectorAll(".role-group");
+function filterByRole(btn) {
+  const role = btn?.dataset?.role;
+  if (!role) return;
 
-    // 3. Loop dan jadikan SEMUA tombol inaktif (gray)
-    allButtons.forEach(button => {
-      button.classList.remove(...activeClasses);
-      button.classList.add(...inactiveClasses);
-      button.setAttribute("aria-pressed", "false"); // Baik untuk aksesibilitas
-    });
+  const pills = document.querySelectorAll('#role-filter .pill');
 
-    // 4. Jadikan HANYA tombol yang diklik menjadi aktif (merah)
-    clickedButton.classList.remove(...inactiveClasses);
-    clickedButton.classList.add(...activeClasses);
-    clickedButton.setAttribute("aria-pressed", "true");
-
-    // 5. Tampilkan/sembunyikan grup konten berdasarkan role
-    allGroups.forEach(group => {
-      // Tampilkan jika role-nya cocok, sembunyikan jika tidak
-      group.classList.toggle("hidden", group.dataset.role !== role);
-    });
-
-    // 6. Scroll ke grup yang baru saja diaktifkan
-    document.querySelector(`.role-group[data-role="${role}"]`)
-      ?.scrollIntoView({ behavior:"smooth", block:"start" });
+  // Toggle: klik role yang sama -> unfilter
+  if (currentRole === role) {
+    currentRole = null;
+    pills.forEach(p => setPillState(p, false));
+    showAllContent();
+    return;
   }
-  // ============================
+
+  // Set filter baru
+  currentRole = role;
+  pills.forEach(p => setPillState(p, p === btn));
+  applyFilterToContent(role);
+}
+
+function setPillState(pill, active) {
+  pill.classList.toggle('is-active', active); // untuk group-[.is-active]:scale-x-100 (underline)
+  ACTIVE_PILL.forEach(c => pill.classList.toggle(c, active));
+  INACTIVE_PILL.forEach(c => pill.classList.toggle(c, !active));
+  pill.setAttribute('aria-pressed', active ? 'true' : 'false');
+}
+
+function applyFilterToContent(role) {
+  // Prioritas 1: grup (section) per role
+  const groups = document.querySelectorAll('.role-group[data-role]');
+  if (groups.length) {
+    groups.forEach(g => g.classList.toggle('hidden', g.dataset.role !== role));
+    document.querySelector(`.role-group[data-role="${role}"]`)
+      ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    return;
+  }
+
+  // Fallback: kartu per item (player-card, dst.)
+  const items =
+    document.querySelectorAll('[data-role].player-card, [data-role].card, [data-role].player')
+      .length
+      ? document.querySelectorAll('[data-role].player-card, [data-role].card, [data-role].player')
+      : document.querySelectorAll('[data-role]');
+
+  items.forEach(el => el.classList.toggle('hidden', el.dataset.role !== role));
+  document.querySelector('[data-role]:not(.hidden)')
+    ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function showAllContent() {
+  const groups = document.querySelectorAll('.role-group[data-role]');
+  const items = groups.length ? groups : document.querySelectorAll('[data-role]');
+  items.forEach(el => el.classList.remove('hidden'));
+}
+// =========================================
+
 
 
   // expose biar bisa dipanggil dari HTML onclick

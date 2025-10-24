@@ -30,12 +30,21 @@
         </figure>
       </div>
 
-      <!-- KIRI (di mobile tampil kedua): Nama + data -->
-      <div class="order-2 lg:order-1 pt-2">
-        <!-- badge -->
-        <span class="inline-block bg-red-800 text-white text-[11px] font-extrabold px-3 py-1 rounded-sm tracking-widest">
-          Profile
-        </span>
+  <!-- KIRI (di mobile tampil kedua): Nama + data -->
+  <div class="order-2 lg:order-1 pt-2">
+    <!-- top row: back link + badge -->
+    <div class="flex items-center gap-4">
+      <a href="{% url 'squad:index' %}" class="group inline-flex items-center text-sm font-semibold text-red-700 hover:text-red-800">
+        <svg class="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M15 6l-6 6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Return to squad</span>
+      </a>
+    
+      <span class="inline-block bg-red-800 text-white text-[11px] font-extrabold px-3 py-1 rounded-sm tracking-widest">
+        Profile
+      </span>
+    </div>
 
         <!-- Nama besar -->
 <h1 class="mt-4 sm:mt-6 leading-[0.95] font-black text-red-800
