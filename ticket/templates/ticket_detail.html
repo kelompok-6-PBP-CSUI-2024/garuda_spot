@@ -1,0 +1,42 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
+  <a href="{% url 'tickets:main_view' %}" class="inline-flex items-center text-sm text-gray-600 hover:text-gray-900">&larr; Back to Tickets</a>
+
+  <!-- Match big card -->
+  <article class="relative rounded-xl border border-gray-200 bg-white overflow-hidden">
+    <div class="p-5">
+      <h1 class="text-2xl font-bold text-gray-900 mb-2 flex items-center justify-center gap-3 flex-wrap">
+        <span class="inline-flex items-center gap-2">
+          {% if match.img_team1 %}<img src="{{ match.img_team1 }}" alt="{{ match.team1 }}" class="w-8 h-8 rounded-full object-cover" />{% endif %}
+          <span>{{ match.team1 }}</span>
+        </span>
+        <span class="text-gray-500">vs</span>
+        <span class="inline-flex items-center gap-2">
+          <span>{{ match.team2 }}</span>
+          {% if match.img_team2 %}<img src="{{ match.img_team2 }}" alt="{{ match.team2 }}" class="w-8 h-8 rounded-full object-cover" />{% endif %}
+        </span>
+      </h1>
+      <p class="text-gray-600 text-sm text-center">{{ match.date }}{% if match.place %} &middot; {{ match.place }}{% endif %}</p>
+    </div>
+  </article>
+
+  <!-- Links list -->
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+    {% for l in links %}
+    <article class="relative rounded-xl border border-gray-200 bg-white overflow-hidden p-4">
+      {% if l.img_vendor %}
+      <img src="{{ l.img_vendor }}" alt="{{ l.vendor }}" class="absolute top-2 right-2 w-10 h-10 object-cover rounded-md" />
+      {% endif %}
+      <a href="{{ l.vendor_link }}" target="_blank" class="block text-red-600 hover:text-red-700 font-medium">{{ l.vendor }}</a>
+      <p class="text-sm text-gray-700">Rp{{ l.price }}</p>
+    </article>
+    {% empty %}
+    <p class="text-gray-500">No links yet.</p>
+    {% endfor %}
+  </div>
+</div>
+{% endblock %}
+

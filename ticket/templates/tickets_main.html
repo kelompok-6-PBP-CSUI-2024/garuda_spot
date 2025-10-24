@@ -4,35 +4,24 @@
 {% block content %}
 
 <div class="flex items-center justify-between mb-4">
-  <div>
-    {% if request.user.is_authenticated %}
-      <button id="btn-open-create" class="inline-block px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
-        Create Ticket
-      </button>
+  <div class="flex items-center gap-2">
+    {% if user.is_authenticated and user.is_superuser %}
+      <button id="btn-open-create" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white">Create Ticket</button>
+    {% elif user.is_authenticated and user.is_admin %}
+      <button id="btn-open-create" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white">Create Ticket</button>
     {% endif %}
   </div>
-
-  <div>
-    {% if request.user.is_authenticated %}
-      <form method="post" action="{% url 'accounts:logout' %}" class="inline">
-        {% csrf_token %}
-        <button type="submit"
-                class="px-3 py-2 rounded bg-red-600 text-white hover:bg-red-700">
-          Logout {{ request.user.username }}
-        </button>
-      </form>
-    {% else %}
-      <a href="{% url 'accounts:login' %}"
-         class="px-3 py-2 rounded border border-gray-300 text-gray-700 hover:bg-gray-50">
-        Login
-      </a>
-      <a href="{% url 'accounts:register' %}"
-         class="ml-2 px-3 py-2 rounded bg-green-600 text-white hover:bg-green-700">
-        Register
-      </a>
-    {% endif %}
+  <div class="relative inline-block">
+    <select id="sort-select" class="px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900">
+      <option value="date_desc">Date: Newest</option>
+      <option value="date_asc">Date: Oldest</option>
+      <option value="id_desc">ID: High to Low</option>
+      <option value="id_asc">ID: Low to High</option>
+      <option value="uuid_desc">UUID: Z-A</option>
+      <option value="uuid_asc">UUID: A-Z</option>
+    </select>
   </div>
-  </div>
+</div>
 
 <div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center" style="display:none">
   <p class="text-gray-600">Loading tickets...</p>
@@ -46,20 +35,27 @@
   <p class="text-gray-600">No tickets yet.</p>
   </div>
 
-<div id="grid" style="display:none"></div>
+<div id="grid" style="display:none" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
 
 <!-- Modal -->
-<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center">
-  <div class="bg-white w-full max-w-lg rounded shadow-lg p-4">
+<div id="modal" class="fixed inset-0 bg-black/40 hidden items-center justify-center" style="overflow-y:auto; z-index:50;">
+  <div class="bg-white w-full max-w-lg rounded shadow-lg p-4" style="max-height:90vh; overflow-y:auto;">
     <div id="modal-body"></div>
   </div>
   
 </div>
 
 <script>
-  const TICKETS_API_ENDPOINT = "{% url 'ticket:show_json' %}";
-  const FORM_MATCH_URL = "{% url 'ticket:form_match' %}";
-  const IS_AUTH =true;
+  const TICKETS_API_ENDPOINT = "{% url 'tickets:show_json' %}";
+  const FORM_MATCH_URL = "{% url 'tickets:form_match' %}";
+  const CAN_MANAGE = {{ request.user.is_admin|yesno:"true,false" }} || {{ request.user.is_superuser|yesno:"true,false" }};
+
+  // URL patterns for by-id and by-uuid variants
+  const JSON_BY_ID_PATTERN = "{% url 'tickets:show_json_by_id' 0 %}";
+  const XML_BY_ID_PATTERN = "{% url 'tickets:show_xml_by_id' 0 %}";
+  const JSON_BY_UUID_PATTERN = "{% url 'tickets:show_json_by_uuid' '00000000-0000-0000-0000-000000000000' %}";
+  const XML_BY_UUID_PATTERN = "{% url 'tickets:show_xml_by_uuid' '00000000-0000-0000-0000-000000000000' %}";
+  const DETAIL_URL_PATTERN = "{% url 'tickets:detail' '00000000-0000-0000-0000-000000000000' %}";
 
   const loadingSpinner = document.getElementById('loading');
   const errorMessage = document.getElementById('error');
@@ -73,7 +69,6 @@
     setVis(errorMessage, showError);
     setVis(emptyStateDisplay, showEmpty);
     setVis(grid, showGrid);
-    if (showGrid && grid) grid.className = 'grid grid-cols-1 gap-6';
   }
 
   function buildMatchCard(item) {
@@ -84,31 +79,48 @@
     wrapper.className = 'p-5';
 
     const h3 = document.createElement('h3');
-    h3.className = 'text-lg font-semibold text-gray-900 mb-2';
-    h3.textContent = `${item.team1 || ''} vs ${item.team2 || ''}`;
+    h3.className = 'text-lg font-semibold text-gray-900 mb-2 flex items-center gap-2 cursor-pointer';
+    const tWrap = document.createElement('div');
+    tWrap.className = 'flex items-center gap-2 flex-wrap';
+    const left = document.createElement('span'); left.className='inline-flex items-center gap-2';
+    if (item.img_team1) { const i=document.createElement('img'); i.src=item.img_team1; i.alt=item.team1||''; i.className='w-6 h-6 rounded-full object-cover'; left.appendChild(i); }
+    left.appendChild(document.createTextNode(item.team1 || ''));
+    const vs = document.createElement('span'); vs.textContent='vs'; vs.className='text-gray-500';
+    const right = document.createElement('span'); right.className='inline-flex items-center gap-2';
+    right.appendChild(document.createTextNode(item.team2 || ''));
+    if (item.img_team2) { const i2=document.createElement('img'); i2.src=item.img_team2; i2.alt=item.team2||''; i2.className='w-6 h-6 rounded-full object-cover'; right.appendChild(i2); }
+    tWrap.append(left, vs, right);
+    h3.appendChild(tWrap);
+    h3.addEventListener('click', () => { window.location.href = DETAIL_URL_PATTERN.replace('00000000-0000-0000-0000-000000000000', item.match_id); });
 
     const p = document.createElement('p');
     p.className = 'text-gray-600 text-sm mb-2';
     p.textContent = item.date || '';
 
+    if (item.img_cup) {
+      const cup = document.createElement('img');
+      cup.src = item.img_cup; cup.alt='Cup'; cup.className='absolute top-2 right-2 w-10 h-10 object-cover rounded-md shadow';
+      el.appendChild(cup);
+    }
+
     const btnRow = document.createElement('div');
     btnRow.className = 'mb-3 flex gap-2';
-    if (IS_AUTH) {
+    if (CAN_MANAGE) {
       const btnEdit = document.createElement('button');
       btnEdit.className = 'px-2 py-1 text-sm rounded border';
       btnEdit.textContent = 'Edit Match';
-      btnEdit.addEventListener('click', () => openModalWith(`{% url 'ticket:form_match_edit' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
+      btnEdit.addEventListener('click', () => openModalWith(`{% url 'tickets:form_match_edit' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
 
       const btnAddLink = document.createElement('button');
       btnAddLink.className = 'px-2 py-1 text-sm rounded border';
       btnAddLink.textContent = 'Add Link';
-      btnAddLink.addEventListener('click', () => openModalWith(`{% url 'ticket:form_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
+      btnAddLink.addEventListener('click', () => openModalWith(`{% url 'tickets:form_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id)));
 
       const btnDelete = document.createElement('button');
       btnDelete.className = 'px-2 py-1 text-sm rounded border border-red-300 text-red-700';
       btnDelete.textContent = 'Delete';
       btnDelete.addEventListener('click', async () => {
-        const url = `{% url 'ticket:delete_ticket' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id);
+        const url = `{% url 'tickets:delete_ticket' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', item.match_id);
         await fetch(url, { method: 'POST' }).catch(() => {});
         await fetchTickets();
       });
@@ -122,17 +134,17 @@
       const a = document.createElement('a');
       a.href = l.vendor_link;
       a.className = 'block text-red-600 hover:text-red-700';
-      a.textContent = `${l.vendor} - ${l.price}`;
+      a.textContent = `${l.vendor} - Rp${new Intl.NumberFormat('id-ID').format(Number(l.price||0))}`;
       const row = document.createElement('div');
       row.className = 'flex items-center justify-between';
       row.appendChild(a);
-      if (IS_AUTH) {
+      if (CAN_MANAGE) {
         const del = document.createElement('button');
         del.className = 'ml-2 text-xs text-red-700 border border-red-300 rounded px-2 py-0.5';
         del.textContent = 'Delete';
         del.addEventListener('click', async (e) => {
           e.preventDefault();
-          const url = `{% url 'ticket:delete_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', l.link_id);
+          const url = `{% url 'tickets:delete_link' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', l.link_id);
           await fetch(url, { method: 'POST' }).catch(() => {});
           await fetchTickets();
         });
@@ -141,14 +153,40 @@
       links.appendChild(row);
     });
 
-    wrapper.append(h3, p, btnRow, links);
+    const quickLinks = document.createElement('div');
+    quickLinks.className = 'mt-3 flex flex-wrap gap-2 text-xs';
+    const aJsonId = document.createElement('a'); aJsonId.href = JSON_BY_ID_PATTERN.replace('0', item.id); aJsonId.target='_blank'; aJsonId.className='px-2 py-1 rounded border text-gray-700 hover:bg-gray-50'; aJsonId.textContent='JSON (id)';
+    const aJsonUuid = document.createElement('a'); aJsonUuid.href = JSON_BY_UUID_PATTERN.replace('00000000-0000-0000-0000-000000000000', item.match_id); aJsonUuid.target='_blank'; aJsonUuid.className='px-2 py-1 rounded border text-gray-700 hover:bg-gray-50'; aJsonUuid.textContent='JSON (uuid)';
+    const aXmlId = document.createElement('a'); aXmlId.href = XML_BY_ID_PATTERN.replace('0', item.id); aXmlId.target='_blank'; aXmlId.className='px-2 py-1 rounded border text-gray-700 hover:bg-gray-50'; aXmlId.textContent='XML (id)';
+    const aXmlUuid = document.createElement('a'); aXmlUuid.href = XML_BY_UUID_PATTERN.replace('00000000-0000-0000-0000-000000000000', item.match_id); aXmlUuid.target='_blank'; aXmlUuid.className='px-2 py-1 rounded border text-gray-700 hover:bg-gray-50'; aXmlUuid.textContent='XML (uuid)';
+    quickLinks.append(aJsonId, aJsonUuid, aXmlId, aXmlUuid);
+
+    wrapper.append(h3, p, btnRow, links, quickLinks);
     el.appendChild(wrapper);
     return el;
   }
 
+  function sortItems(items, key){
+    const arr = [...items];
+    const cmp = (a,b)=> (a<b?-1:(a>b?1:0));
+    switch(key){
+      case 'date_asc': return arr.sort((a,b)=>cmp(new Date(a.date), new Date(b.date)));
+      case 'date_desc': return arr.sort((a,b)=>cmp(new Date(b.date), new Date(a.date)));
+      case 'id_asc': return arr.sort((a,b)=>cmp(a.id, b.id));
+      case 'id_desc': return arr.sort((a,b)=>cmp(b.id, a.id));
+      case 'uuid_asc': return arr.sort((a,b)=>cmp(a.match_id, b.match_id));
+      case 'uuid_desc': return arr.sort((a,b)=>cmp(b.match_id, a.match_id));
+      default: return arr;
+    }
+  }
+
+  let currentItems = [];
+  let currentSort = 'date_desc';
+
   function render(items) {
     grid.innerHTML = '';
-    items.forEach(it => grid.appendChild(buildMatchCard(it)));
+    const sorted = sortItems(items, currentSort);
+    sorted.forEach(it => grid.appendChild(buildMatchCard(it)));
   }
 
   async function fetchTickets() {
@@ -157,9 +195,9 @@
       const res = await fetch(TICKETS_API_ENDPOINT, { headers: { Accept: 'application/json' }});
       if (!res.ok) throw new Error('HTTP ' + res.status);
       const data = await res.json();
-      const items = Array.isArray(data) ? data : [];
-      if (items.length === 0) displaySections({ showEmpty: true });
-      else { render(items); displaySections({ showGrid: true }); }
+      currentItems = Array.isArray(data) ? data : [];
+      if (currentItems.length === 0) displaySections({ showEmpty: true });
+      else { render(currentItems); displaySections({ showGrid: true }); }
     } catch (e) {
       console.error('Ticket fetch error:', e);
       displaySections({ showError: true });
@@ -199,5 +237,7 @@
 
   const btnOpenCreate = document.getElementById('btn-open-create');
   if (btnOpenCreate) btnOpenCreate.addEventListener('click', () => openModalWith(FORM_MATCH_URL));
+  const sortSelect = document.getElementById('sort-select');
+  if (sortSelect) sortSelect.addEventListener('change', () => { currentSort = sortSelect.value; if (currentItems.length) render(currentItems); });
   </script>
 {% endblock %}

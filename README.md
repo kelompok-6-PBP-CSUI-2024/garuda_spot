@@ -24,7 +24,7 @@ GarudaSpot adalah aplikasi fansite all-in-one untuk pecinta Timnas Indonesia. Sa
 - *Data Pemain:* Profil lengkap (posisi, klub, caps/goals, riwayat), dengan pencarian & filter per posisi.  
 - *Jadwal & Skor:* Kalender pertandingan timnas senior dengan detail tempat dan jenis kompetisi, serta statistik pasca-laga.  
 - *Forum Diskusi:* Thread matchday, analisis taktik, upvote, kategori diskusi.  
-- *Jual Tiket:* Pilih kategori kursi, lihat riwayat transaksi.  
+- *Jual Tiket:* view tiket pertandingan-pertandingan yang akan datang beserta dengan link ke vendor 
 - *Marketplace Merch:* Toko merchandise timnas komunitas/UMKM, katalog foto/ukuran, serta nama penjual.
 
 ---

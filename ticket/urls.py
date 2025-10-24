@@ -10,12 +10,14 @@ from .views import (
     # show endpoints
     show_xml, show_xml_by_id, show_xml_by_uuid,
     show_json, show_json_by_id, show_json_by_uuid,
+    ticket_detail,
 )
 
 app_name = "ticket"
 
 urlpatterns = [
     path("", main_view, name="main_view"),
+    path("detail/<uuid:match_uuid>/", ticket_detail, name="detail"),
 
     # forms (GET fragments for modals)
     path("form/match/", form_match, name="form_match"),

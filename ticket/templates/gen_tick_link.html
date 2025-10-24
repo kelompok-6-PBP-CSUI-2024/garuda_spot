@@ -1,5 +1,10 @@
-<form id="link-form" method="post" action="{% url 'ticket:create_link' match.match_id %}">
-  <div class="space-y-3">
+<div class="flex items-center justify-between mb-2">
+  <button type="button" data-close-modal class="text-xl leading-none" title="Close">&lt;</button>
+  <div class="text-sm text-gray-500">Add Link</div>
+</div>
+
+<form id="link-form" method="post" action="{% url 'tickets:create_link' match.match_id %}">
+  <div class="space-y-3" style="max-height:60vh; overflow-y:auto; padding-right:.25rem;">
     <div>
       <label class="block text-sm font-medium">Vendor</label>
       <input name="vendor" class="w-full border rounded p-2" required />
