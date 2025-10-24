@@ -26,7 +26,6 @@ class Post(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     like_count = models.PositiveIntegerField(default=0)
-    like_count = models.PositiveIntegerField(default=0) 
     
 
     class Meta:
