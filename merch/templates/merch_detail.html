@@ -4,96 +4,110 @@
 
 {% block content %}
 <div class="bg-white w-full min-h-screen mt-14 mb-16">
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
-    <!-- Back -->
-    <a href="{% url 'merch:show_merch' %}"
-       class="inline-flex items-center gap-2 text-[#b91c1c] hover:underline mb-4">
-      <span class="text-xl">←</span><span>Back</span>
-    </a>
-
-    <!-- Card -->
-    <div class="rounded-2xl border-2 border-[#e11d2a]/70 shadow-[0_0_0_3px_rgba(225,29,42,0.08)] bg-white p-6 sm:p-8 overflow-hidden">
-      <div class="grid grid-cols-1 md:grid-cols-[260px_1fr] gap-8 items-start">
-
-        <!-- Thumbnail -->
-        <div class="mx-auto md:mx-0 w-[220px] sm:w-[240px] aspect-square rounded-xl overflow-hidden border border-red-200 bg-[linear-gradient(45deg,#eee_25%,transparent_25%,transparent_50%,#eee_50%,#eee_75%,transparent_75%,transparent)] bg-[length:24px_24px]">
-          {% if merch.thumbnail %}
-            <img id="d-thumb" src="{{ merch.thumbnail }}" alt="{{ merch.name }}" class="w-full h-full object-cover">
-          {% endif %}
-        </div>
-
-        <!-- Content -->
-        <div class="min-w-0">  {# min-w-0 agar wrapping bekerja di grid #}
-          <h1 id="d-name" class="text-4xl font-extrabold text-[#3b0b0b] leading-tight mb-2 break-words">
-            {{ merch.name }}
-          </h1>
-
-          <p class="text-gray-700 mb-4">
-            <span class="font-semibold">Vendor:</span> <span id="d-vendor">{{ merch.vendor }}</span>
-            <span class="mx-2 text-gray-400">•</span>
-            <span class="font-semibold">Category:</span>
-            <span id="d-category" class="capitalize">{{ merch.category }}</span>
-          </p>
-
-          {% if merch.description %}
-          <div id="d-desc" class="text-gray-700 mb-6 break-words break-all overflow-hidden">
-            {{ merch.description }}
-          </div>
-          {% endif %}
-
-          <!-- Price box -->
-          <div class="inline-flex items-baseline gap-1 rounded-xl border-2 border-[#e11d2a] px-4 py-3 mb-5 w-fit max-w-full">
-            <span class="text-xl font-semibold text-[#7f1d1d]">Rp</span>
-            <span id="d-price" class="text-4xl font-extrabold leading-none text-[#7f1d1d] whitespace-nowrap">
-              {{ merch.price|intcomma }}
-            </span>
-          </div>
-
-          <!-- Actions -->
-          <div class="flex items-center gap-3">
-            {% if merch.link %}
-            <a href="{{ merch.link }}" target="_blank" rel="noopener noreferrer"
-               class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-[#e11d2a] text-[#b91c1c] hover:bg-[#e11d2a] hover:text-white transition">
-              Visit vendor
-            </a>
-            {% endif %}
-
-            {% if user.is_authenticated and user.is_admin %}
-            <!-- EDIT (admin) -->
-            <button type="button"
-                    id="editBtn"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-600 text-white bg-red-600 hover:bg-red-700 transition"
-                    data-url="{% url 'merch:update_merch' merch.id %}"
-                    data-id="{{ merch.id }}"
-                    data-name="{{ merch.name|escape }}"
-                    data-vendor="{{ merch.vendor|escape }}"
-                    data-price="{{ merch.price }}"
-                    data-stock="{{ merch.stock }}"
-                    data-thumbnail="{{ merch.thumbnail|default:''|escape }}"
-                    data-category="{{ merch.category }}"
-                    data-link="{{ merch.link|default:''|escape }}"
-                    data-description="{{ merch.description|default:''|escape }}">
-              Edit
-            </button>
-
-            <!-- DELETE (admin) -->
-            <button type="button"
-                    id="deleteBtn"
-                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl border border-red-600 text-white bg-red-600 hover:bg-red-700 transition">
-              Delete
-            </button>
-            {% endif %}
-          </div>
-        </div>
-      </div>
+    <div class="mb-6">
+      <a href="{% url 'merch:show_merch' %}"
+         class="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-3 py-2 text-gray-700 hover:bg-gray-50">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18"/>
+        </svg>
+        <span>Kembali</span>
+      </a>
     </div>
+
+    <article id="product-content" 
+           class="overflow-hidden">
+        
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-8 p-6 sm:p-8 items-start">
+            
+            <div id="image-container" class="w-full flex justify-center items-center overflow-hidden rounded-md border border-red-100 bg-gray-100">
+                <div class="w-full aspect-square overflow-hidden">
+                    {% if merch.thumbnail %}
+                        <img id="d-thumb" 
+                             src="{{ merch.thumbnail }}" 
+                             alt="{{ merch.name }}" 
+                             class="w-full h-full object-cover transition-transform duration-300 ease-out transform hover:scale-110">
+                    {% else %}
+                        <div class="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">No Image</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="space-y-4 flex flex-col min-w-0">
+                
+                <p id="d-vendor" class="text-xl font-bold text-gray-700 leading-tight mb-1 uppercase">
+                    {{ merch.vendor }}
+                </p>
+                <h1 id="d-name" class="text-3xl sm:text-4xl font-extrabold text-gray-900 leading-tight break-words">
+                    {{ merch.name }}
+                </h1>
+
+                <p class="text-4xl font-extrabold text-red-700 my-2">
+                    Rp <span id="d-price">{{ merch.price|intcomma }}</span>
+                </p>
+
+                <div class="flex flex-wrap items-center text-sm text-gray-600 gap-8 border-t border-b border-gray-200 py-3">
+                    <span class="font-medium">
+                        Stock: <span id="d-stock">{{ merch.stock|default:"-" }}</span>
+                    </span>
+                    <span class="font-medium capitalize">
+                        Category: <span id="d-category">{{ merch.category }}</span>
+                    </span>
+                </div>
+
+                {% if merch.description %}
+                <div id="d-desc" class="text-gray-800 text-sm sm:text-md leading-none pt-2 overflow-hidden">
+                    {{ merch.description|linebreaksbr}}
+                </div>
+                {% endif %}
+
+                <div class="flex flex-col sm:flex-row gap-4 pt-4">
+                    {% if merch.link %}
+                    <a href="{{ merch.link }}" target="_blank" rel="noopener noreferrer"
+                       class="bg-red-600 text-white w-full py-3 rounded-md font-medium hover:bg-red-700 transition-colors text-center inline-flex items-center justify-center">
+                      Shop Now (Visit Vendor)
+                    </a>
+                    {% endif %}
+
+                    {% if user.is_authenticated and user.is_admin %}
+                    <div class="flex gap-4 w-full sm:w-auto">
+                        <button type="button"
+                                id="editBtn"
+                                class="bg-gray-200 text-gray-800 w-full sm:w-auto px-4 py-3 rounded-md font-medium hover:bg-gray-300 transition-colors"
+                                data-url="{% url 'merch:update_merch' merch.id %}"
+                                data-id="{{ merch.id }}"
+                                data-name="{{ merch.name|escape }}"
+                                data-vendor="{{ merch.vendor|escape }}"
+                                data-price="{{ merch.price }}"
+                                data-stock="{{ merch.stock }}"
+                                data-thumbnail="{{ merch.thumbnail|default:''|escape }}"
+                                data-category="{{ merch.category }}"
+                                data-link="{{ merch.link|default:''|escape }}"
+                                data-description="{{ merch.description|default:''|escape }}">
+                          Edit
+                        </button>
+
+                        <button type="button"
+                                id="deleteBtn"
+                                class="bg-red-500 text-white w-full sm:w-auto px-4 py-3 rounded-md font-medium hover:bg-red-600 transition-colors">
+                          Delete
+                        </button>
+                    </div>
+                    {% endif %}
+                </div>
+                
+                {% if not merch.link and not user.is_admin %}
+                    <div class="text-gray-500 text-sm italic pt-4">Tautan produk tidak tersedia.</div>
+                {% endif %}
+            </div>
+        </div>
+    </article>
 
   </div>
 </div>
 
 {% if user.is_authenticated and user.is_admin %}
-<!-- Edit Modal -->
 <div id="editModal" class="hidden fixed inset-0 z-50 w-full h-full flex items-center justify-center">
   <div class="absolute inset-0 bg-black/60" onclick="EditDetail.hide()"></div>
 
@@ -251,6 +265,11 @@ const EditDetail = (function(){
       document.getElementById('d-vendor').textContent = data.vendor;
       document.getElementById('d-category').textContent = cap(data.category);
       document.getElementById('d-price').textContent   = formatRupiah(data.price);
+      document.getElementById('d-stock').textContent   = data.stock ?? '-';
+      
+      const linkEl = document.querySelector('a[href*="Visit vendor"]');
+      if (linkEl) linkEl.href = data.link || '#';
+
       if (data.description !== undefined){
         const descEl = document.getElementById('d-desc');
         if (descEl) descEl.textContent = data.description || '';

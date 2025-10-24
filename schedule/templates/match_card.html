@@ -1,0 +1,86 @@
+<!-- <a href="{% url 'schedule:show_match' s.id %}">
+    <div class="card rounded-xl border-red-600 border-2 shadow-sm p-5">
+   
+        <div class="flex flex-row justify-between">
+            <div class="font-light text-sm">
+                <p>{{ s.match_date|date:"D, d M Y" }}</p>
+                <p>{{ s.location }}</p>
+            </div>
+            <img src="{{ s.category_image_url }}" class="w-8" alt="">
+        </div>
+        <div class="flex flex-col mt-10 mb-2 gap-3">
+            <div class="flex flex-row justify-between items-center">
+                <div class="flex flex-row gap-4 items-center">
+                    <img src="https://flagcdn.com/w160/{{ s.home_code }}.png" class="rounded-full w-11 h-11 border-2 border-red-600 object-cover">
+                    <span class="font-extrabold small uppercase text-xl">{{ s.home_team }}</span>
+                </div>
+                <h2 class="text-xl bg-red-100 px-4 py-2 rounded-lg font-semibold">
+                    1
+                </h2>
+            </div>
+            <div class="flex flex-row justify-between items-center">
+                <div class="flex flex-row gap-4 items-center">
+                    <img src="https://flagcdn.com/w160/{{ s.away_code }}.png" class="rounded-full w-11 h-11 border-2 border-red-600 object-cover">
+                    <span class="font-extrabold small uppercase text-xl">{{ s.away_team }}</span>
+                </div>
+                <h2 class="text-xl bg-red-100 px-4 py-2 rounded-lg font-semibold">
+                    1
+                </h2>
+            </div>
+        </div>
+    </div>
+</a> -->
+
+<a href="{% url 'schedule:show_match' s.id %}">
+    <div class="flex flex-col bg-white border-b border-t border-red-600 bg-red-900/10 items-center hover:bg-white hover:shadow-lg hover:-translate-y-1 py-4 px-2 transition-all duration-300 ease-in-out">
+        <div class="flex flex-row justify-between items-start gap-3 w-full max-w-12xl px-4">
+            <div>
+                <p class="text-md">{{ s.match_date|date:"l, d M Y" }}</p>
+                <p class="font-light text-md">{{ s.location }}</p>
+            </div>
+            <span class="font-semibold uppercase text-xl text-right truncate">{{ s.home_team }}</span>
+            <div class="flex flex-row justify-center items-start gap-1">
+                <span class="font text-red-700 text-md block">{{ s.category }}</span>
+                {% if s.category_image_url != '' %}
+                    <img src="{{ s.category_image_url }}" class="w-8 mb-2 inline-block ml-2" alt="">
+                {% endif %}
+            </div>
+        </div>
+        <div class="flex flex-row justify-between items-start gap-3 w-full max-w-12xl px-4">
+            <span class="font-semibold uppercase text-xl text-right truncate">{{ s.home_team }}</span>
+            <span class="font-semibold uppercase text-xl text-left truncate">{{ s.away_team }}</span>
+        </div>
+        
+<div class="relative flex flex-col md:flex-row  items-center justify-between w-full max-w-4xl my-2 px-4 py-4">
+  <!-- Tim kiri -->
+  <div class="mr-2 flex flex-row-reverse items-center gap-3 flex-1 min-w-0">
+    <img src="https://flagcdn.com/w160/{{ s.home_code }}.png"
+         class=" h-10 border border-gray-400 object-cover shrink-0">
+    <span class="font-semibold uppercase text-xl text-right truncate">{{ s.home_team }}</span>
+  </div>
+
+  <!-- Spacer tengah agar skor punya ruang tetap -->
+  <div class="w-32 flex justify-center">
+    <h2 class="text-xl font-semibold px-6 py-2 bg-red-100/80 rounded-md text-center">
+      {% if s.home_score is not None and s.away_score is not None %}
+        {{ s.home_score }} - {{ s.away_score }}
+      {% else %}
+        0 - 0
+      {% endif %}
+    </h2>
+  </div>
+
+  <!-- Tim kanan -->
+  <div class="ml-2 flex flex-row items-center gap-3 flex-1 min-w-0">
+    <img src="https://flagcdn.com/w160/{{ s.away_code }}.png"
+         class="h-10 border border-gray-400 object-cover shrink-0">
+    <span class="font-semibold uppercase text-xl text-left truncate">{{ s.away_team }}</span>
+  </div>
+</div>
+
+
+
+
+        </div>
+    
+</a>

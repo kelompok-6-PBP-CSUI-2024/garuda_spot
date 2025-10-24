@@ -1,0 +1,16 @@
+{% for p in posts %}
+  <a href="{% url 'forum:post_detail' p.slug %}" class="block no-underline text-inherit">
+    <div class="card hover:bg-gray-50 transition">
+      <div class="meta">
+        <span>{{ p.author_name|default:"Orang" }}</span>
+        <span>•</span>
+        <span>{{ p.created_at|date:'l, d F Y' }}</span>
+        <span class="right-tag">{{ p.category.name }}</span>
+      </div>
+      <div class="title">{{ p.title }}</div>
+      <p class="muted">{{ p.excerpt|default:p.body|truncatechars:220 }}</p>
+    </div>
+  </a>
+{% empty %}
+  <p class="muted">Belum ada posting.</p>
+{% endfor %}

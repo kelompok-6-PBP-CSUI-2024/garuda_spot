@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<section class="relative w-screen mx-[calc(50%-50vw)] bg-white">
+
+  <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+    <!-- Grid responsif: gambar dulu di mobile, teks dulu di desktop -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-start">
+
+<div class="order-1 lg:order-2">
+        <figure class="relative w-full flex items-center justify-center p-4 md:p-0">
+          
+          <div class="relative w-full max-w-md aspect-[3/4] rounded-3xl overflow-hidden
+                      bg-gradient-to-b from-red-500/5 via-red-800/30 to-red-700/50
+                      shadow-[0_10px_50px_rgba(225,29,42,0.25)]">
+  
+            {% if p.photo %}
+              <img src="{{ p.photo.url }}" alt="{{ p.name }}"
+                   class="absolute inset-0 w-full h-full object-cover" />
+            {% elif p.photo_url %}
+              <img src="{{ p.photo_url }}" alt="{{ p.name }}"
+                   class="absolute inset-0 w-full h-full object-cover" />
+            {% else %}
+              <img src="{% static 'squad/placeholder.png' %}" alt="{{ p.name }}"
+                   class="absolute inset-0 w-full h-full object-cover" />
+            {% endif %}
+          </div>
+
+        </figure>
+      </div>
+
+  <!-- KIRI (di mobile tampil kedua): Nama + data -->
+  <div class="order-2 lg:order-1 pt-2">
+    <!-- top row: back link + badge -->
+    <div class="flex items-center gap-4">
+      <a href="{% url 'squad:index' %}" class="group inline-flex items-center text-sm font-semibold text-red-700 hover:text-red-800">
+        <svg class="w-4 h-4 mr-2 transition-transform group-hover:-translate-x-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" aria-hidden="true">
+          <path d="M15 6l-6 6 6 6" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span>Return to squad</span>
+      </a>
+    
+      <span class="inline-block bg-red-800 text-white text-[11px] font-extrabold px-3 py-1 rounded-sm tracking-widest">
+        Profile
+      </span>
+    </div>
+
+        <!-- Nama besar -->
+<h1 class="mt-4 sm:mt-6 leading-[0.95] font-black text-red-800
+                   text-4xl sm:text-6xl md:text-7xl lg:text-8xl break-words">
+          {{ p.fname|default:p.name|capfirst }}{% if p.lname %}<br>{{ p.lname|capfirst }}{% endif %}
+        </h1>
+        <!-- grid info -->
+        <div class="mt-8 md:mt-10 grid grid-cols-1 sm:grid-cols-2 gap-x-10 gap-y-6 text-gray-700">
+          <div>
+            <div class="text-md text-gray-900 font-medium">Position</div>
+            <div class="mt-1 font-extrabold text-xl text-red-900">
+              {{ p.positions_display|default:p.position1|default:"-" }}
+            </div>
+          </div>
+          <div>
+            <div class="text-md text-gray-900 font-medium">Date of Birth</div>
+            <div class="mt-1 font-extrabold text-xl text-red-900">
+              {% if p.birth_date %}{{ p.birth_date|date:"d M Y"|upper }}{% else %}-{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="text-md text-gray-900 font-medium">Height</div>
+            <div class="mt-1 font-extrabold text-xl text-red-900">
+              {% if p.height_cm %}{{ p.height_cm }} cm{% else %}-{% endif %}
+            </div>
+          </div>
+          <div>
+            <div class="text-md text-gray-900  fontmfont-medium">Club</div>
+            <div class="mt-1 font-extrabold text-xl text-red-900">{{ p.club|default:"-" }}</div>
+          </div>
+        </div>
+
+        <!-- stats -->
+        <div class="mt-10 md:mt-12 grid grid-cols-3 gap-4 sm:gap-6">
+          <div class="text-start">
+            <div class="text-lg text-gray-900 font-medium">Appearances</div>
+            <div class="text-2xl sm:text-3xl font-black text-red-800">{{ p.caps|default:"0" }}</div>
+          </div>
+          <div class="text-start">
+            <div class="text-lg text-gray-900 font-medium">Goals</div>
+            <div class="text-2xl sm:text-3xl font-black text-red-800">{{ p.goals|default:"0" }}</div>
+          </div>
+          <div class="text-start">
+            <div class="text-lg text-gray-900 font-medium">Assists</div>
+            <div class="text-2xl sm:text-3xl font-black text-red-800">{{ p.assists|default:"0" }}</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+{% endblock %}

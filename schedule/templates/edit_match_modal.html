@@ -1,0 +1,198 @@
+<div id="edit-fixture-modal" class="hidden fixed inset-0 z-50 overflow-y-auto bg-gray-900 bg-opacity-75 items-center justify-center">
+    <div id="edit-fixture-modal-content" class="bg-white rounded-lg shadow-xl m-4 p-6 max-w-2xl w-full transition-all duration-300 transform opacity-0 scale-95">
+        
+        <div class="flex justify-between items-center border-b pb-3 mb-4">
+            <h3 class="text-2xl font-semibold text-red-700">Edit Match Fixture</h3>
+            <button type="button" id="close-edit-modal-btn" class="text-gray-400 hover:text-gray-600">&times;</button>
+        </div>
+        
+        <form id="edit-match-form" class="space-y-4 max-h-[80vh] overflow-y-auto pr-2">
+            {% csrf_token %}
+            <input type="hidden" id="edit-match-id" name="id">
+
+            <div class="grid grid-cols-2 gap-4">
+                <div>
+                    <label for="edit-home_team" class="block text-sm font-medium text-gray-700">Home Team *</label>
+                    <input type="text" id="edit-home_team" name="home_team" required
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                </div>
+                <div>
+                    <label for="edit-away_team" class="block text-sm font-medium text-gray-700">Away Team *</label>
+                    <input type="text" id="edit-away_team" name="away_team" required
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                </div>
+
+                <div>
+                    <label for="edit-home_code" class="block text-sm font-medium text-gray-700">Home Code (e.g., id, en)</label>
+                    <input type="text" id="edit-home_code" name="home_code" maxlength="3"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase">
+                </div>
+                <div>
+                    <label for="edit-away_code" class="block text-sm font-medium text-gray-700">Away Code (e.g., id, en)</label>
+                    <input type="text" id="edit-away_code" name="away_code" maxlength="3"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 uppercase">
+                </div>
+
+                <div>
+                    <label for="edit-match_date" class="block text-sm font-medium text-gray-700">Date *</label>
+                    <input type="datetime-local" id="edit-match_date" name="match_date" required
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                </div>
+                <div>
+                    <label for="edit-location" class="block text-sm font-medium text-gray-700">Location *</label>
+                    <input type="text" id="edit-location" name="location" required
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-3 gap-4">
+                <div>
+                    <label for="edit-category" class="block text-sm font-medium text-gray-700">Category *</label>
+                    <select id="edit-category" name="category" required
+                            class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                        {% for cat in categories %}
+                            <option value="{{ cat }}">{{ cat }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div>
+                    <label for="edit-home_score" class="block text-sm font-medium text-gray-700">Home Score</label>
+                    <input type="number" id="edit-home_score" name="home_score" min="0"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                </div>
+                <div>
+                    <label for="edit-away_score" class="block text-sm font-medium text-gray-700">Away Score</label>
+                    <input type="number" id="edit-away_score" name="away_score" min="0"
+                           class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2">
+                </div>
+            </div>
+
+            <details class="mb-4">
+                <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                    Edit Match Statistics (Optional)
+                </summary>
+                <fieldset class="border border-gray-300 p-4 rounded-md mt-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                        <div class="space-y-4">
+                            <h4 class="text-md font-semibold text-center">HOME</h4>
+                            <div>
+                                <label for="edit-shots_home" class="block text-sm font-medium text-gray-700">Shots</label>
+                                <input type="number" name="shots_home" id="edit-shots_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-shots_on_target_home" class="block text-sm font-medium text-gray-700">Shots on Target</label>
+                                <input type="number" name="shots_on_target_home" id="edit-shots_on_target_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-possession_home" class="block text-sm font-medium text-gray-700">Possession (%)</label>
+                                <input type="number" name="possession_home" id="edit-possession_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-passes_home" class="block text-sm font-medium text-gray-700">Passes</label>
+                                <input type="number" name="passes_home" id="edit-passes_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-pass_accuracy_home" class="block text-sm font-medium text-gray-700">Pass Accuracy (%)</label>
+                                <input type="number" name="pass_accuracy_home" id="edit-pass_accuracy_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-fouls_home" class="block text-sm font-medium text-gray-700">Fouls</label>
+                                <input type="number" name="fouls_home" id="edit-fouls_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-yellow_cards_home" class="block text-sm font-medium text-gray-700">Yellow Cards</label>
+                                <input type="number" name="yellow_cards_home" id="edit-yellow_cards_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-red_cards_home" class="block text-sm font-medium text-gray-700">Red Cards</label>
+                                <input type="number" name="red_cards_home" id="edit-red_cards_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-offsides_home" class="block text-sm font-medium text-gray-700">Offsides</label>
+                                <input type="number" name="offsides_home" id="edit-offsides_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-corners_home" class="block text-sm font-medium text-gray-700">Corners</label>
+                                <input type="number" name="corners_home" id="edit-corners_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <h4 class="text-md font-semibold text-center">AWAY</h4>
+                            <div>
+                                <label for="edit-shots_away" class="block text-sm font-medium text-gray-700">Shots</label>
+                                <input type="number" name="shots_away" id="edit-shots_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-shots_on_target_away" class="block text-sm font-medium text-gray-700">Shots on Target</label>
+                                <input type="number" name="shots_on_target_away" id="edit-shots_on_target_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-possession_away" class="block text-sm font-medium text-gray-700">Possession (%)</label>
+                                <input type="number" name="possession_away" id="edit-possession_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-passes_away" class="block text-sm font-medium text-gray-700">Passes</label>
+                                <input type="number" name="passes_away" id="edit-passes_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-pass_accuracy_away" class="block text-sm font-medium text-gray-700">Pass Accuracy (%)</label>
+                                <input type="number" name="pass_accuracy_away" id="edit-pass_accuracy_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-fouls_away" class="block text-sm font-medium text-gray-700">Fouls</label>
+                                <input type="number" name="fouls_away" id="edit-fouls_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-yellow_cards_away" class="block text-sm font-medium text-gray-700">Yellow Cards</label>
+                                <input type="number" name="yellow_cards_away" id="edit-yellow_cards_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-red_cards_away" class="block text-sm font-medium text-gray-700">Red Cards</label>
+                                <input type="number" name="red_cards_away" id="edit-red_cards_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-offsides_away" class="block text-sm font-medium text-gray-700">Offsides</label>
+                                <input type="number" name="offsides_away" id="edit-offsides_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                            <div>
+                                <label for="edit-corners_away" class="block text-sm font-medium text-gray-700">Corners</label>
+                                <input type="number" name="corners_away" id="edit-corners_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                            </div>
+                        </div>
+                    </div>
+                </fieldset>
+            </details>
+
+            <details class="mb-4">
+                <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                    Edit Other Details (Lineup, Review)
+                </summary>
+                <div class="space-y-4 mt-2 border border-gray-300 p-4 rounded-md">
+                    <div>
+                        <label for="edit-lineup" class="block text-sm font-medium text-gray-700">Lineup (Markdown supported)</label>
+                        <textarea id="edit-lineup" name="lineup" rows="3"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+                    </div>
+                    <div>
+                        <label for="edit-review" class="block text-sm font-medium text-gray-700">Review (Markdown supported)</label>
+                        <textarea id="edit-review" name="review" rows="3"
+                                  class="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"></textarea>
+                    </div>
+                </div>
+            </details>
+            
+            <div id="edit-form-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative" role="alert"></div>
+        </form>
+
+        <div class="flex justify-end pt-4 border-t mt-4 px-2">
+            <button type="button" id="cancel-edit-btn" class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300 mr-2">Cancel</button>
+            <button type="submit" id="submit-edit-btn" form="edit-match-form" class="px-6 py-2 text-sm font-medium text-white bg-red-700 rounded-md hover:bg-red-800 disabled:opacity-50 flex items-center justify-center">
+                <span id="edit-submit-text">Update Match</span>
+                <svg id="edit-submit-loading" class="animate-spin h-5 w-5 text-white ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+                </svg>
+            </button>
+        </div>
+    </div>
+</div>

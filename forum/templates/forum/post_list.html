@@ -1,0 +1,300 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{# 
+   <head>
+#}
+{% block meta %}
+  <style type="text/tailwindcss">
+    .card {
+      @apply border-t border-red-200 pt-6 pb-4 box-border overflow-visible min-w-0;
+    }
+    .meta {
+      @apply text-sm text-gray-500 flex flex-wrap items-center gap-x-3;
+    }
+    .meta span:first-child {
+      @apply font-bold text-gray-800; /* penulis bold */
+    }
+    .title {
+      @apply text-lg font-extrabold my-1.5 overflow-visible break-words text-gray-900;
+    }
+    .card p, .muted {
+      @apply text-gray-500 whitespace-normal overflow-visible break-words max-w-full;
+    }
+    .right-tag {
+      @apply ml-auto text-red-500 static shadow-lg;
+    }
+    .likebar {
+      @apply flex items-center gap-2 mt-2;
+    }
+    .btn-like {
+      @apply bg-transparent cursor-pointer leading-none transition duration-150 ease-in-out hover:scale-110;
+    }
+    .btn-like .heart {
+      @apply text-xl text-gray-300;
+    }
+    .btn-like.liked .heart {
+      @apply text-red-800;
+    }
+    .post-text {
+      @apply whitespace-pre-wrap break-words max-w-full text-gray-600 mt-1.5;
+    }
+  </style>
+{% endblock meta %}
+
+
+{# 
+  BLOCK INI BERISI SEMUA KONTEN HALAMAN ANDA 
+#}
+{% block content %}
+<div id="forum-wrapper" class="font-sans h-full" data-initial-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}" data-has-next="{% if page_obj and page_obj.has_next %}true{% else %}false{% endif %}">
+  
+  <div class="wrap max-w-8xl mx-auto px-4 h-full grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
+    
+    <aside class="bg-red-900 text-white flex flex-col items-start px-4 pb-8 pt-4 h-fit sticky top-20 rounded-sm ">
+
+      <h3 class="tracking-wider mb-4 font-extrabold text-center border-l-2 py-1 px-2 border-white text-lg">FORUM</h3>
+      <nav class="flex flex-col space-y-1 w-full">
+        <a href="#" data-cat="all" class="js-cat block text-white py-2 px-3 opacity-90 text-start hover:opacity-100 hover:bg-red-800 rounded
+          {% if active_category == 'all' %}font-bold underline{% endif %}"> 
+          Semua 
+        </a>
+        {% for c in categories %}
+          <a href="#" data-cat="{{ c.slug }}" class="js-cat block text-white py-2 px-3 opacity-90 text-start hover:opacity-100 hover:bg-red-800 rounded
+            {% if active_category == c.slug %}underline{% endif %}">
+            {{ c.name }}
+          </a>
+        {% endfor %}
+        </nav>
+    </aside>
+
+    <main class="content min-w-0 mt-4 mx-5">
+      
+      <div class="toolbar flex flex-col sm:flex-row gap-3 items-center justify-between mb-4 pt-8 ">
+        <div class="muted text-sm shrink-0">Garuda Spot - {{ year }}</div>
+        <form id="search-form" class="w-full sm:w-auto">
+          <input type="search" name="q" id="q" placeholder="Cari topik…" value="{{ form.q.value|default:'' }}"
+                 class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+          <input type="hidden" name="category" id="category" value="{{ active_category }}">
+        </form>
+      </div>
+
+      <form id="post-create-form" class="bg-white border border-gray-200 rounded-sm p-4 mb-4 shadow-sm space-y-3">
+        {% csrf_token %}
+        <input type="text" name="title" placeholder="Judul" required
+               class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+        <input type="text" name="author_name" placeholder="Penulis (opsional)"
+               class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+        <select name="category" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+          <option value="">-- Pilih Kategori --</option>
+          {% for c in categories %}
+            <option value="{{ c.id }}" {% if active_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
+          {% endfor %}
+        </select>
+        <textarea name="body" rows="4" placeholder="Tulis isi post…" required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+        
+        <div class="flex justify-between items-center pt-2">
+           <button type="submit" class="border border-transparent rounded-sm px-4 py-2 bg-red-700 text-white cursor-pointer hover:bg-red-800 font-semibold transition-colors">
+             Kirim Post
+           </button>
+           <span id="post-create-msg" class="muted text-sm"></span>
+        </div>
+      </form>
+
+      <div id="post-list" class="bg-white rounded-sm border border-gray-200 shadow-sm px-4">
+        {% for p in posts %}
+          {% include "forum/_post_card.html" with p=p liked_ids=liked_ids %}
+        {% empty %}
+          <p class="muted p-6 text-center">Belum ada posting.</p>
+        {% endfor %}
+      </div>
+
+      <button id="load-more" 
+              class="loadmore block my-5 mx-auto border border-gray-300 px-4 py-2 rounded-sm bg-white cursor-pointer hover:bg-gray-50 font-medium text-gray-700"
+              {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
+        Muat lebih banyak
+      </button>
+    </main>
+  </div> 
+</div> 
+{% endblock content %}
+
+{# 
+  BLOCK INI MENAMBAHKAN JAVASCRIPT KE HALAMAN
+#}
+{% block body_end %}
+  <script>
+  (function(){
+    /* CSRF helper */
+    function getCookie(name){
+      const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+      return m ? m.pop() : '';
+    }
+    const csrftoken = getCookie('csrftoken'); 
+
+    const listEl = document.getElementById('post-list');
+    const loadBtn = document.getElementById('load-more');
+    const qEl = document.getElementById('q');
+    const catInput = document.getElementById('category');
+    const postForm = document.getElementById('post-create-form');
+    const postMsg = document.getElementById('post-create-msg');
+    const wrapper = document.getElementById('forum-wrapper'); 
+    const initialPageAttr = wrapper.getAttribute('data-initial-page');
+    let page = parseInt(initialPageAttr || '1', 10);
+
+    function fetchList(opts={}){
+      const params = new URLSearchParams({
+        page: opts.page || 1,
+        q: qEl.value || '',
+        category: catInput.value || 'all'
+      });
+      const url = "{% url 'forum:post_list_partial' %}?" + params.toString();
+      return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
+        .then(r => r.json());
+    }
+    
+    function render(html, append=false){
+      if (!append) { // Untuk filter/search (mengganti)
+          if (!html.trim()) {
+              listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
+          } else {
+              listEl.innerHTML = html;
+          }
+      } else { // Untuk prepend (post baru) atau append (load more)
+          const emptyMsg = listEl.querySelector('.muted');
+          if (emptyMsg) emptyMsg.remove();
+          
+          if (opts.prepend) { // 'opts' tidak terdefinisi di sini, perbaiki
+            listEl.insertAdjacentHTML('afterbegin', html);
+          } else {
+            listEl.insertAdjacentHTML('beforeend', html);
+          }
+      }
+    }
+
+    // Versi render yang lebih baik
+    function renderPosts(html, mode = 'replace') {
+        const emptyMsg = listEl.querySelector('.muted');
+        if (emptyMsg) emptyMsg.remove();
+
+        if (mode === 'replace') {
+            if (!html.trim()) {
+                listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
+            } else {
+                listEl.innerHTML = html;
+            }
+        } else if (mode === 'append') {
+            listEl.insertAdjacentHTML('beforeend', html);
+        } else if (mode === 'prepend') {
+            listEl.insertAdjacentHTML('afterbegin', html);
+        }
+    }
+
+    
+    function updateLoadMore(show){ loadBtn.hidden = !show; }
+
+    /* === Event Listeners === */
+
+    /* Like / Unlike (toggle) */
+    listEl.addEventListener('click', function(e){
+      const btn = e.target.closest('.btn-like');
+      if (!btn) return;
+      const card = btn.closest('.card');
+      const slug = card?.dataset?.slug;
+      if (!slug) return;
+      fetch(`{% url 'forum:post_like' 'SLUG_PLACEHOLDER' %}`.replace('SLUG_PLACEHOLDER', slug), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrftoken }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) return;
+        const countEl = card.querySelector('.like-count');
+        if (countEl) countEl.textContent = data.like_count;
+        if (data.liked) btn.classList.add('liked');
+        else btn.classList.remove('liked');
+      })
+      .catch(() => {});
+    });
+
+    /* Submit post baru */
+    postForm.addEventListener('submit', (e)=>{
+      e.preventDefault();
+      postMsg.textContent = 'Mengirim…';
+      const formData = new FormData(postForm);
+      
+      // === PERBAIKAN: Hapus header 'X-CSRFToken' ===
+      fetch("{% url 'forum:post_create' %}", {
+        method: 'POST',
+        headers: {'X-Requested-With':'XMLHttpRequest'}, // <-- TOKEN DIHAPUS DARI SINI
+        body: formData
+      }).then(r=>r.json())
+        .then(data=>{
+          if(data.ok && data.html){
+            renderPosts(data.html, 'prepend'); // Gunakan fungsi render yang baru
+            postForm.reset();
+            postMsg.textContent = 'Terkirim!';
+            setTimeout(()=>postMsg.textContent='', 1200);
+          }else{
+            postMsg.textContent = 'Gagal: ' + (data.errors ? JSON.stringify(data.errors) : 'Error');
+          }
+        }).catch(()=> postMsg.textContent = 'Gagal jaringan');
+    });
+
+    document.querySelectorAll('.js-cat').forEach(a => {
+      a.addEventListener('click', (e) => {
+        e.preventDefault();
+        // Perbarui tampilan link
+        document.querySelectorAll('.js-cat').forEach(x => {
+            x.classList.remove('font-bold', 'underline', 'bg-red-800/50');
+        });
+        a.classList.add('font-bold', 'underline', 'bg-red-800/50');
+        
+        catInput.value = a.dataset.cat;
+        page = 1;
+        fetchList({page}).then(({html, has_next}) => {
+          renderPosts(html, 'replace'); // Gunakan fungsi render yang baru
+          updateLoadMore(Boolean(has_next));
+          history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
+        });
+      });
+    });
+
+    /* Search (debounce) */
+    let t;
+    qEl.addEventListener('input', ()=>{
+      clearTimeout(t);
+      t = setTimeout(()=>{
+        page = 1;
+        fetchList({page}).then(({html, has_next}) => {
+          renderPosts(html, 'replace'); // Gunakan fungsi render yang baru
+          updateLoadMore(Boolean(has_next));
+          history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
+        });
+      }, 320);
+    });
+
+    /* Load more */
+    loadBtn.addEventListener('click', ()=>{
+      page += 1;
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Memuat...';
+      fetchList({page}).then(({html, has_next}) => {
+        renderPosts(html, 'append'); // Gunakan fungsi render yang baru
+        updateLoadMore(Boolean(has_next));
+      }).catch(()=>{ 
+        page -= 1; 
+      }).finally(() => {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Muat lebih banyak';
+      });
+    });
+
+    /* Inisialisasi Tombol Load More */
+    updateLoadMore(wrapper.getAttribute('data-has-next') === 'true');
+    
+  })();
+  </script>
+{% endblock body_end %}

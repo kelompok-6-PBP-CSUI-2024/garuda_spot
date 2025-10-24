@@ -1,0 +1,25 @@
+{# forum/templates/forum/_post_card.html #}
+{% load static %}
+  <a href="{% url 'forum:post_detail' p.slug %}" >
+<div class="card" data-slug="{{ p.slug }}">
+  <div class="meta">
+    <span>{{ p.author_name|default:"Orang" }}</span>
+    <span>•</span>
+    <span>{{ p.created_at|date:'l, d F Y' }}</span>
+    <span class="right-tag">{{ p.category.name }}</span>
+  </div>
+  
+<h1 class="title hover:text-red-700 transition-colors">
+    {{ p.title }}
+  </h1>
+
+  <p class="muted">{{ p.excerpt|default:p.body|truncatechars:220 }}</p>
+  
+  <div class="likebar">
+    <button class="btn-like {% if p.id in liked_ids %}liked{% endif %}" data-slug="{{ p.slug }}">
+      <span class="heart">♥</span>
+    </button>
+    <span class="like-count text-sm text-gray-500">{{ p.like_count }}</span>
+  </div>
+</div>
+</a>
