@@ -32,8 +32,9 @@ def show_main(request):
 
 def show_match(request, match_id):
     match = get_object_or_404(NationalTeamSchedule, pk=match_id)
-    # ... (Stats logic) ...
-    stats = [
+    
+    # Statistik dasar (nilai mentah)
+    raw_stats = [
         ("Shots", match.shots_home, match.shots_away),
         ("Shots on Target", match.shots_on_target_home, match.shots_on_target_away),
         ("Possession (%)", match.possession_home, match.possession_away),
@@ -45,7 +46,33 @@ def show_match(request, match_id):
         ("Offsides", match.offsides_home, match.offsides_away),
         ("Corners", match.corners_home, match.corners_away),
     ]
-    return render(request, "match_detail.html", {"match": match, "stats": stats})
+
+    stats_for_template = []
+    
+    for stat_name, home_val, away_val in raw_stats:
+        # Mengkonversi ke integer, default ke 0 jika None
+        home = int(home_val) if home_val is not None else 0
+        away = int(away_val) if away_val is not None else 0
+        total = home + away
+        
+        home_percent = 50
+        away_percent = 50
+        
+        if total > 0:
+            # Hitung persentase di Python (lebih aman)
+            home_percent = round((home / total) * 100)
+            away_percent = 100 - home_percent # Pastikan total persentase 100
+
+        # Kita mengirim dictionary, bukan tuple
+        stats_for_template.append({
+            "name": stat_name,
+            "home_val": home,
+            "away_val": away,
+            "home_percent": home_percent,
+            "away_percent": away_percent
+        })
+
+    return render(request, "match_detail.html", {"match": match, "stats": stats_for_template})
 
 @login_required
 def create_match(request):

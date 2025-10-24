@@ -41,17 +41,18 @@
   </div>
 
 
-  <div class="bg-white/70 backdrop-blur-md rounded-xl p-6 mb-10">
+<div class="bg-white/70 backdrop-blur-md rounded-xl p-6 mb-10">
     <h3 class="text-xl font-semibold mb-6 text-center text-gray-800">Statistik Pertandingan</h3>
 
     <div class="space-y-6">
-
-      {% for stat, home, away in stats %}
-        {% include "partials/stat_bar.html" %}
+      
+      {# MENGGANTI LOOP LAMA: for stat, home, away in stats #}
+      {% for stat_data in stats %} 
+        {% include "partials/stat_bar.html" with stat_data=stat_data %}
       {% endfor %}
 
     </div>
-  </div>
+</div>
 
 
   {% if match.lineup_image_url %}
@@ -68,11 +69,23 @@
     </div>
   {% endif %}
 
-
-  <div class="flex justify-end gap-4 mt-8">
-    <a href="{% url 'schedule:edit_match' match.id %}" class="px-4 py-2 border border-gray-400 text-red-800">Edit</a>
-    <a href="{% url 'schedule:delete_match' match.id %}" class="px-4 py-2 bg-red-700 text-white">Hapus</a>
-  </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Memberi sedikit jeda agar browser sempat merender halaman dengan lebar 0
+    setTimeout(() => {
+        const statBars = document.querySelectorAll('.stat-bar');
+        
+        statBars.forEach(bar => {
+            const targetWidth = bar.dataset.width; // Ambil persentase dari data-width
+            if (targetWidth) {
+                // Terapkan lebar sebenarnya. CSS transition akan menangani animasi
+                bar.style.width = `${targetWidth}%`;
+            }
+        });
+    }, 100); // Jeda 100ms
+});
+</script>
 
 {% endblock %}

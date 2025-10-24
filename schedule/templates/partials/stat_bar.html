@@ -1,21 +1,17 @@
+
 <div>
   <div class="flex justify-between text-sm text-gray-600 mb-1">
-    <span>{{ home }}</span>
-    <span class="font-medium">{{ stat }}</span>
-    <span>{{ away }}</span>
+    {# Menggunakan nilai mentah untuk label #}
+    <span>{{ stat_data.home_val }}</span>
+    <span class="font-medium">{{ stat_data.name }}</span>
+    <span>{{ stat_data.away_val }}</span>
   </div>
 
-  {% with total=home|add:away %}
-    <div class="relative h-3 bg-gray-200 rounded-full overflow-hidden">
-      {% if total > 0 %}
-        <div class="absolute left-0 top-0 h-full bg-red-600 transition-all duration-700"
-             style="width: calc({{ home }} / {{ total }} * 100%)"></div>
-        <div class="absolute right-0 top-0 h-full bg-blue-600 transition-all duration-700"
-             style="width: calc({{ away }} / {{ total }} * 100%)"></div>
-      {% else %}
-        <div class="absolute left-0 top-0 h-full w-1/2 bg-red-600"></div>
-        <div class="absolute right-0 top-0 h-full w-1/2 bg-blue-600"></div>
-      {% endif %}
-    </div>
-  {% endwith %}
+  <div class="relative h-3 bg-gray-200 rounded-full overflow-hidden">
+    {# Gunakan persentase yang sudah dihitung oleh views.py #}
+    <div class="stat-bar absolute left-0 top-0 h-full bg-red-600 transition-all duration-700"
+         data-width="{{ stat_data.home_percent }}"
+         style="width: 0;"></div> <div class="stat-bar absolute right-0 top-0 h-full bg-blue-600 transition-all duration-700"
+         data-width="{{ stat_data.away_percent }}"
+         style="width: 0;"></div> </div>
 </div>
