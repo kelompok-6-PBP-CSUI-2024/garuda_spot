@@ -1,28 +1,169 @@
 {% load static %}
 
-<header class="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200/70 py-2 shadow-lg">
-  <div class="max-w-7xl mx-auto h-14 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-    <a href="{% url 'news:show_main' %}" class="flex flex-row items-center gap-2 justify-center">
+<style>
+    /* Styling animasi tombol hamburger */
+    .hamburger-icon span {
+        transition: all 0.2s ease-in-out;
+    }
+    .hamburger-icon.open span:nth-child(1) {
+        transform: rotate(45deg) translate(5px, 5px);
+    }
+    .hamburger-icon.open span:nth-child(2) {
+        opacity: 0;
+    }
+    .hamburger-icon.open span:nth-child(3) {
+        transform: rotate(-45deg) translate(5px, -5px);
+    }
+
+    /* --- ANIMASI LINK DESKTOP (Center Out) --- */
+    .nav-link-desktop {
+        position: relative;
+        padding-bottom: 4px;
+        transition: color 0.25s ease-in-out;
+    }
+
+    .nav-link-desktop::after {
+        content: '';
+        position: absolute;
+        width: 100%;
+        transform: scaleX(0);
+        height: 2px;
+        bottom: 0;
+        left: 0;
+        background-color: #E53935;
+        transform-origin: center;
+        transition: transform 0.40s ease-out;
+    }
+
+    .nav-link-desktop:hover::after {
+        transform: scaleX(1);
+    }
+
+    /* LINK AKTIF */
+    .nav-link-desktop.active-link {
+        color: #E53935 !important;
+        font-weight: 600;
+    }
+
+    .nav-link-desktop.active-link::after,
+    .nav-link-desktop.active-link:hover::after {
+        transform: scaleX(1) !important;
+        background-color: #EF4444;
+    }
+
+    .nav-link-desktop.active-link:hover {
+        color: #B91C1C;
+    }
+</style>
+
+<header class="fixed top-0 inset-x-0 z-50 bg-white/90 backdrop-blur border-b border-gray-200/70 shadow-lg">
+  <div class="max-w-7xl mx-auto h-16 px-4 sm:px-6 lg:px-8 flex items-center justify-between">
+    
+    <a href="{% url 'news:show_main' %}" class="flex flex-row items-center gap-2 justify-center py-2">
       <img src="{% static 'images/logo_top.png' %}" alt="Garuda Spot" class="h-8 w-8"/>
-      <span class="text-lg sm:text-xl font-bold tracking-tight">GarudaSpot</span>
+      <span class="text-xl font-bold tracking-tight text-red-700">GarudaSpot</span>
     </a>
 
+    <!-- NAVBAR DESKTOP -->
+    <nav class="hidden md:flex items-center space-x-4 text-sm font-medium">
+      <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.resolver_match.app_name == 'news' %}active-link{% endif %}" 
+         href="{% url 'news:show_main' %}">News</a>
+
+      <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.resolver_match.app_name == 'squad' %}active-link{% endif %}" 
+         href="{% url 'squad:index' %}">Player</a>
+
+      <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.resolver_match.app_name == 'forum' %}active-link{% endif %}" 
+         href="{% url 'forum:post_list' %}">Forum</a>
+
+      <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.path == '/ticket/' %}active-link{% endif %}" 
+         href="">Ticket</a>
+
+      <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.resolver_match.app_name == 'merch' %}active-link{% endif %}" 
+         href="{% url 'merch:show_merch' %}">Merch</a>
+
+      <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.resolver_match.app_name == 'schedule' %}active-link{% endif %}" 
+         href="{% url 'schedule:show_main' %}">Schedule</a>
+    </nav>
+
+    <!-- LOGIN / LOGOUT -->
     <div class="flex items-center gap-4">
-      {% if request.user.is_authenticated %}
-        <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
-          {% csrf_token %}
-          <button type="submit"
-                  class="nav-bottom-link text-gray-700 hover:text-red-700 px-0 py-0 bg-transparent border-0 focus:outline-none">
-            Logout{% if request.user.username %} {{ request.user.username }}{% endif %}
-          </button>
-        </form>
-      {% else %}
-        <a href="{% url 'accounts:login' %}" class="nav-bottom-link text-gray-700 hover:text-red-700">
-          Login
-        </a>
-      {% endif %}
+        {% if request.user.is_authenticated %}
+            <form method="post" action="{% url 'accounts:logout' %}" class="m-0">
+                {% csrf_token %}
+                <button type="submit"
+                        class="text-sm font-medium text-gray-700 hover:text-red-700 transition-colors px-0 py-0 bg-transparent border-0 focus:outline-none">
+                    Logout <span class="hidden sm:inline">{% if request.user.username %} {{ request.user.username }}{% endif %}</span>
+                </button>
+            </form>
+        {% else %}
+            <a href="{% url 'accounts:login' %}" class="text-sm font-medium text-gray-700 hover:text-red-700 transition-colors">
+                Login
+            </a>
+        {% endif %}
+
+        <!-- TOMBOL HAMBURGER -->
+        <button id="menu-button" class="md:hidden z-50 p-2 focus:outline-none">
+            <div class="hamburger-icon flex flex-col justify-around h-6 w-6">
+                <span class="block h-0.5 w-6 bg-gray-600 rounded-full"></span>
+                <span class="block h-0.5 w-6 bg-gray-600 rounded-full"></span>
+                <span class="block h-0.5 w-6 bg-gray-600 rounded-full"></span>
+            </div>
+        </button>
     </div>
+  </div>
+
+  <!-- MOBILE MENU -->
+  <div id="mobile-menu" 
+       class="md:hidden fixed inset-0 top-16 bg-white/95 backdrop-blur-sm z-40 transform translate-x-full transition-transform duration-300 ease-in-out overflow-y-auto">
+        <div class="flex flex-col items-start p-6 text-lg font-medium space-y-4">
+
+            <a class="mobile-nav-link text-gray-700 hover:text-red-700 transition-colors w-full block border-b border-gray-100 py-2 {% if request.resolver_match.app_name == 'news' %}active-link{% endif %}" 
+               href="{% url 'news:show_main' %}">News</a>
+
+            <a class="mobile-nav-link text-gray-700 hover:text-red-700 transition-colors w-full block border-b border-gray-100 py-2 {% if request.resolver_match.app_name == 'squad' %}active-link{% endif %}" 
+               href="{% url 'squad:index' %}">Player</a>
+
+            <a class="mobile-nav-link text-gray-700 hover:text-red-700 transition-colors w-full block border-b border-gray-100 py-2 {% if request.resolver_match.app_name == 'forum' %}active-link{% endif %}" 
+               href="{% url 'forum:post_list' %}">Forum</a>
+
+            <a class="mobile-nav-link text-gray-700 hover:text-red-700 transition-colors w-full block border-b border-gray-100 py-2 {% if request.path == '/ticket/' %}active-link{% endif %}" 
+               href="">Ticket</a>
+
+            <a class="mobile-nav-link text-gray-700 hover:text-red-700 transition-colors w-full block border-b border-gray-100 py-2 {% if request.resolver_match.app_name == 'merch' %}active-link{% endif %}" 
+               href="{% url 'merch:show_merch' %}">Merch</a>
+
+            <a class="mobile-nav-link text-gray-700 hover:text-red-700 transition-colors w-full block border-b border-gray-100 py-2 {% if request.resolver_match.app_name == 'schedule' %}active-link{% endif %}" 
+               href="{% url 'schedule:show_main' %}">Schedule</a>
+
+        </div>
   </div>
 </header>
 
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const menuButton = document.getElementById('menu-button');
+    const mobileMenu = document.getElementById('mobile-menu');
+    const hamburgerIcon = menuButton.querySelector('.hamburger-icon');
 
+    const toggleMenu = () => {
+        const isOpen = mobileMenu.classList.contains('translate-x-0');
+        if (isOpen) {
+            mobileMenu.classList.remove('translate-x-0');
+            mobileMenu.classList.add('translate-x-full');
+            hamburgerIcon.classList.remove('open');
+            document.body.style.overflow = '';
+        } else {
+            mobileMenu.classList.add('translate-x-0');
+            mobileMenu.classList.remove('translate-x-full');
+            hamburgerIcon.classList.add('open');
+            document.body.style.overflow = 'hidden';
+        }
+    };
+
+    menuButton.addEventListener('click', toggleMenu);
+
+    document.querySelectorAll('#mobile-menu a').forEach(link => {
+        link.addEventListener('click', () => setTimeout(toggleMenu, 50));
+    });
+});
+</script>

@@ -18,7 +18,7 @@
         </form>
 {% if request.user.is_authenticated and request.user.is_admin %}
 <div class="text-end mb-3 mr-8">
-    <button type="button" id="open-fixture-modal-btn" class="border-b-2 border-red-600 px-8 py-2 text-sm cursor-pointer">+ Fixtures</button>
+    <button type="button" id="open-match-modal-btn" class="border-b-2 border-red-600 px-8 py-2 text-sm cursor-pointer">+ matchs</button>
 </div>
 {% endif %}
     </div>
@@ -37,6 +37,16 @@
     </div>
 
     <div id="grid" class="hidden"></div>
+    
+    <div id="load-more-container" class="text-center py-6 hidden my-12">
+        <button id="load-more-btn" class="border rounded-md border-red-700 text-black px-8 py-3 font-semibold hover:text-red-900 transition duration-150 ease-in-out disabled:opacity-50" disabled>
+            <span id="load-more-text">Load More Matches</span>
+            <svg id="load-more-loading" class="animate-spin h-5 w-5 text-white inline-block ml-2 hidden" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+            </svg>
+        </button>
+    </div>
 
     <div id="empty" class="bg-white py-12 text-center hidden">
         <h3 class="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
@@ -55,7 +65,7 @@
 <script src="{% static 'js/toast.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <script>
-// --- 1. Konfigurasi & Variabel Global ---
+// --- 1. Konfigurasi & Variabel Global (DIPERBARUI) ---
     const MATCH_API_ENDPOINT = "{% url 'schedule:show_json' %}";
     const ADD_MATCH_ENDPOINT = "{% url 'schedule:add_match_ajax' %}";
     
@@ -70,9 +80,12 @@
     // Base URL yang akan digunakan di JS, hasilnya: "/schedule/update-ajax/"
     const UPDATE_MATCH_BASE_URL = UPDATE_MATCH_FULL_URL.replace(UUID_PLACEHOLDER_FOR_URL, '').replace(/\/$/, "");
     const DELETE_MATCH_BASE_URL = DELETE_MATCH_FULL_URL.replace(UUID_PLACEHOLDER_FOR_URL, '').replace(/\/$/, "");
-    let allMatchesData = [];
+    
+    let allMatchesData = []; // Menyimpan semua data match yang di-fetch dari server
+    let displayedMatchesCount = 0; // Jumlah match yang sudah ditampilkan
+    const MATCHES_PER_PAGE = 4; // Tentukan berapa banyak match yang ditampilkan setiap kali
 
-    // --- 2. Elemen DOM ---
+    // --- 2. Elemen DOM (DIPERBARUI) ---
     const loadingSpinner = document.getElementById('loading');
     const errorDisplay = document.getElementById('error');
     const errorMessage = document.getElementById('error-message');
@@ -80,20 +93,26 @@
     const matchesGridContainer = document.getElementById('grid');
     const categoryFilterSelect = document.getElementById('categoryFilterForm').querySelector('select');
     
+    // Elemen Load More
+    const loadMoreContainer = document.getElementById('load-more-container');
+    const loadMoreBtn = document.getElementById('load-more-btn');
+    const loadMoreText = document.getElementById('load-more-text');
+    const loadMoreLoading = document.getElementById('load-more-loading');
+    
     // Elemen Modal Create
-    const modal = document.getElementById('fixture-modal');
-    const modalContent = document.getElementById('fixture-modal-content');
-    const openBtn = document.getElementById('open-fixture-modal-btn');
-    const openBtnEmpty = document.getElementById('open-fixture-modal-btn-empty');
-    const closeBtn = document.getElementById('close-fixture-modal-btn');
-    const cancelBtn = document.getElementById('cancel-fixture-btn');
+    const modal = document.getElementById('match-modal');
+    const modalContent = document.getElementById('match-modal-content');
+    const openBtn = document.getElementById('open-match-modal-btn');
+    const openBtnEmpty = document.getElementById('open-match-modal-btn-empty');
+    const closeBtn = document.getElementById('close-match-modal-btn');
+    const cancelBtn = document.getElementById('cancel-match-btn');
     const form = document.getElementById('create-match-form');
-    const submitBtn = document.getElementById('submit-fixture-btn');
+    const submitBtn = document.getElementById('submit-match-btn');
     const formError = document.getElementById('form-error');
 
     // Elemen Modal Edit
-    const editModal = document.getElementById('edit-fixture-modal');
-    const editModalContent = document.getElementById('edit-fixture-modal-content');
+    const editModal = document.getElementById('edit-match-modal');
+    const editModalContent = document.getElementById('edit-match-modal-content');
     const closeEditBtn = document.getElementById('close-edit-modal-btn');
     const cancelEditBtn = document.getElementById('cancel-edit-btn');
     const editForm = document.getElementById('edit-match-form');
@@ -103,11 +122,12 @@
 
     // --- 3. Utility Functions ---
     function setVis(el, show) { if (el) el.classList.toggle('hidden', !show); }
-    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false, showLoadMore = false }) {
         setVis(loadingSpinner, showLoading);
         setVis(errorDisplay, showError);
         setVis(emptyStateDisplay, showEmpty);
         setVis(matchesGridContainer, showGrid);
+        setVis(loadMoreContainer, showLoadMore); // Tambahkan kontrol Load More
         if (matchesGridContainer) {
             matchesGridContainer.style.display = showGrid ? '' : 'none';
         }
@@ -116,9 +136,20 @@
         const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
         return v ? decodeURIComponent(v.split('=')[1]) : null;
     }
+    
+    // Fungsi untuk mengontrol tombol Load More
+    function setLoadMoreButtonState({ loading = false, disabled = false, show = true }) {
+        if (!loadMoreBtn || !loadMoreText || !loadMoreLoading || !loadMoreContainer) return;
 
-    // --- 4. Render Card Match (Diperbarui untuk tombol Admin) ---
+        setVis(loadMoreContainer, show);
+        loadMoreBtn.disabled = disabled || loading;
+        setVis(loadMoreText, !loading);
+        setVis(loadMoreLoading, loading);
+    }
+
+    // --- 4. Render Card Match (DIPERBARUI untuk tombol Admin) ---
     function buildMatchCardElement(match) {
+        // ... (Fungsi buildMatchCardElement sama persis) ...
         const anchor = document.createElement('a');
         const linkDetail = `{% url 'schedule:show_match' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', match.id);
         anchor.href = linkDetail;
@@ -184,54 +215,117 @@
         return anchor;
     }
 
-    function renderAllMatches(matches) {
-        if (!matchesGridContainer) return;
-        matchesGridContainer.innerHTML = '';
-        const monthGroups = {};
-        matches.forEach(match => {
-            const date = new Date(match.match_date);
-            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
-            if (!monthGroups[monthKey]) { monthGroups[monthKey] = { month_date: new Date(date.getFullYear(), date.getMonth(), 1), matches: [] }; }
-            monthGroups[monthKey].matches.push(match);
-        });
-        const sortedGroups = Object.values(monthGroups).sort((a, b) => b.month_date - a.month_date); 
-        sortedGroups.forEach(group => {
-            const groupContainer = document.createElement('div');
+    // --- 5. Logika Render & Load More (BARU/DIPERBARUI) ---
+    
+    // Fungsi untuk me-render satu grup bulan (heading + container) jika belum ada
+    function getOrCreateMonthGroupContainer(groupKey, date) {
+        let groupContainer = document.getElementById(`month-group-${groupKey}`);
+        if (!groupContainer) {
+            groupContainer = document.createElement('div');
+            groupContainer.id = `month-group-${groupKey}`;
             groupContainer.className = 'my-4 mx-4 bg-white py-4 px-4';
-            const monthTitle = group.month_date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            
+            const monthTitle = date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
             const titleElement = document.createElement('h3');
             titleElement.className = 'text-3xl font-semibold mt-6 mb-10 border-l-4 border-red-700 pl-4';
             titleElement.textContent = monthTitle;
+            
             const matchesContainer = document.createElement('div');
             matchesContainer.className = 'flex flex-col';
-            group.matches.sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
-            group.matches.forEach(match => { matchesContainer.appendChild(buildMatchCardElement(match)); });
+            matchesContainer.id = `matches-container-${groupKey}`;
+
             groupContainer.appendChild(titleElement);
             groupContainer.appendChild(matchesContainer);
             matchesGridContainer.appendChild(groupContainer);
+        }
+        return document.getElementById(`matches-container-${groupKey}`);
+    }
+
+    function renderNextMatches(matchesToRender) {
+        if (!matchesGridContainer) return;
+        
+        // Sortir data berdasarkan tanggal (paling baru di atas)
+        matchesToRender.sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
+        
+        matchesToRender.forEach(match => {
+            const date = new Date(match.match_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            
+            const matchesContainer = getOrCreateMonthGroupContainer(monthKey, date);
+            
+            const matchCard = buildMatchCardElement(match);
+            matchesContainer.appendChild(matchCard);
+            displayedMatchesCount++;
         });
 
-        // Pasang Event Listeners untuk tombol Admin setelah rendering
+        // Setelah render, pasang kembali event listener admin
         attachAdminButtonListeners(); 
+    }
+    
+    function loadMoreMatches() {
+        const selectedCategory = categoryFilterSelect ? categoryFilterSelect.value : '';
+        const filteredMatches = selectedCategory ? allMatchesData.filter(match => match.category === selectedCategory) : allMatchesData;
+        
+        const remainingMatches = filteredMatches.slice(displayedMatchesCount);
+        const matchesToRender = remainingMatches.slice(0, MATCHES_PER_PAGE);
+
+        if (matchesToRender.length > 0) {
+            setLoadMoreButtonState({ loading: true, disabled: true });
+            
+            // Set timeout untuk simulasi loading (bisa dihilangkan)
+            setTimeout(() => {
+                renderNextMatches(matchesToRender);
+                
+                const isAllLoaded = displayedMatchesCount >= filteredMatches.length;
+                
+                if (isAllLoaded) {
+                    setLoadMoreButtonState({ show: false });
+                } else {
+                    setLoadMoreButtonState({ loading: false, disabled: false });
+                }
+            }, 300); // Penundaan kecil untuk UX
+        } else {
+            setLoadMoreButtonState({ show: false }); // Sembunyikan jika tidak ada lagi
+        }
     }
 
     function filterAndDisplayMatches() {
+        // Reset tampilan
+        displayedMatchesCount = 0;
+        if (matchesGridContainer) matchesGridContainer.innerHTML = '';
+
         const selectedCategory = categoryFilterSelect ? categoryFilterSelect.value : '';
         const filteredMatches = selectedCategory ? allMatchesData.filter(match => match.category === selectedCategory) : allMatchesData;
 
         if (filteredMatches.length === 0) {
-            displayPageSection({ showEmpty: true, showGrid: false, showLoading: false, showError: false });
+            displayPageSection({ showEmpty: true, showGrid: false, showLoading: false, showError: false, showLoadMore: false });
         } else {
-            renderAllMatches(filteredMatches);
-            displayPageSection({ showGrid: true, showEmpty: false, showLoading: false, showError: false });
+            // Tampilkan set pertama match
+            const initialMatches = filteredMatches.slice(0, MATCHES_PER_PAGE);
+            renderNextMatches(initialMatches); // Menggunakan renderNextMatches untuk render awal
+            
+            // Cek apakah ada lebih banyak match untuk ditampilkan
+            const isAllLoaded = displayedMatchesCount >= filteredMatches.length;
+            
+            displayPageSection({ 
+                showGrid: true, 
+                showEmpty: false, 
+                showLoading: false, 
+                showError: false,
+                showLoadMore: !isAllLoaded 
+            });
+            
+            if (!isAllLoaded) {
+                 setLoadMoreButtonState({ loading: false, disabled: false });
+            }
         }
     }
 
-    // --- 5. Fetch Data (sama) ---
+    // --- 6. Fetch Data (DIPERBARUI di bagian finally) ---
     async function fetchMatchesFromServer() {
         try {
             if (!matchesGridContainer || matchesGridContainer.classList.contains('hidden')) {
-                 displayPageSection({ showLoading: true, showGrid: false, showEmpty: false, showError: false });
+                 displayPageSection({ showLoading: true, showGrid: false, showEmpty: false, showError: false, showLoadMore: false });
              }
             const apiUrl = `${MATCH_API_ENDPOINT}?_=${Date.now()}`;
             const response = await fetch(apiUrl, {
@@ -249,26 +343,28 @@
         } catch (error) {
             console.error('Error in fetchMatchesFromServer:', error);
             if (errorMessage) errorMessage.textContent = error.message;
-            displayPageSection({ showError: true, showLoading: false, showGrid: false, showEmpty: false });
+            displayPageSection({ showError: true, showLoading: false, showGrid: false, showEmpty: false, showLoadMore: false });
         } finally {
              if (loadingSpinner) loadingSpinner.classList.add('hidden');
          }
     }
 
-    // --- 6. Modal Create Functions (sama) ---
-    function showFixtureModal() {
+    // --- 7. Modal Create Functions (sama) ---
+    function showmatchModal() {
+        // ... (Logika sama) ...
         if (!modal || !modalContent) return;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => { modalContent.classList.remove('opacity-0', 'scale-95'); modalContent.classList.add('opacity-100', 'scale-100'); }, 50);
     }
-    function hideFixtureModal() {
+    function hidematchModal() {
+        // ... (Logika sama) ...
         if (!modal || !modalContent) return;
         modalContent.classList.remove('opacity-100', 'scale-100'); modalContent.classList.add('opacity-0', 'scale-95');
         setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 150);
     }
 
-    // --- 7. Submit Match (Create - sama) ---
+    // --- 8. Submit Match (Create - sama) ---
     async function addMatchEntry(form, submitBtn) {
         // ... (Logika sama) ...
         const submitText = submitBtn.querySelector('#submit-text');
@@ -295,8 +391,8 @@
             }
 
             form.reset();
-            hideFixtureModal();
-            showToast('Match Added!', 'Fixture has been added successfully.', 'success');
+            hidematchModal();
+            showToast('Match Added!', 'match has been added successfully.', 'success');
             document.dispatchEvent(new CustomEvent('matchAdded'));
 
         } catch (error) {
@@ -314,15 +410,17 @@
         }
     }
     
-    // --- 8. Modal Edit Functions (sama) ---
+    // --- 9. Modal Edit Functions (sama) ---
 
-    function showEditFixtureModal() {
+    function showEditmatchModal() {
+        // ... (Logika sama) ...
         if (!editModal || !editModalContent) return;
         editModal.classList.remove('hidden');
         editModal.classList.add('flex');
         setTimeout(() => { editModalContent.classList.remove('opacity-0', 'scale-95'); editModalContent.classList.add('opacity-100', 'scale-100'); }, 50);
     }
-    function hideEditFixtureModal() {
+    function hideEditmatchModal() {
+        // ... (Logika sama) ...
         if (!editModal || !editModalContent) return;
         editModalContent.classList.remove('opacity-100', 'scale-100'); editModalContent.classList.add('opacity-0', 'scale-95');
         setTimeout(() => { 
@@ -333,6 +431,7 @@
     }
     
     function loadMatchDataToForm(matchId) {
+        // ... (Logika sama) ...
         const match = allMatchesData.find(m => m.id === matchId);
         if (!match) { showToast('Error', 'Match data not found.', 'error'); return; }
 
@@ -369,12 +468,13 @@
         document.getElementById('edit-review').value = match.review || '';
         // ... (Statistik lainnya) ...
 
-        showEditFixtureModal();
+        showEditmatchModal();
     }
     
-    // --- 9. AJAX Edit & Delete Functions (DIPERBAIKI penanganan error non-JSON) ---
+    // --- 10. AJAX Edit & Delete Functions (DIPERBAIKI penanganan error non-JSON) ---
 
     async function updateMatchEntry(form, submitBtn, matchId) {
+        // ... (Logika sama) ...
         const submitText = submitBtn.querySelector('#edit-submit-text');
         const submitLoading = submitBtn.querySelector('#edit-submit-loading');
         
@@ -418,8 +518,8 @@
             }
 
             // --- SUKSES ---
-            hideEditFixtureModal();
-            showToast('Match Updated!', 'Fixture has been updated successfully.', 'success');
+            hideEditmatchModal();
+            showToast('Match Updated!', 'match has been updated successfully.', 'success');
             document.dispatchEvent(new CustomEvent('matchAdded')); // Trigger refresh
 
         } catch (error) {
@@ -438,6 +538,7 @@
     }
 
     async function deleteMatchEntry(matchId, matchTeams) {
+        // ... (Logika sama) ...
         if (!confirm(`Are you sure you want to delete the match: ${matchTeams}? This action cannot be undone.`)) {
             return;
         }
@@ -506,14 +607,14 @@
         });
     }
 
-    // --- 10. Event Listeners ---
+    // --- 11. Event Listeners (DIPERBARUI) ---
     document.addEventListener('DOMContentLoaded', function() {
         // Modal Create Listeners
-        if (openBtn) { openBtn.addEventListener('click', showFixtureModal); }
-        if (openBtnEmpty) { openBtnEmpty.addEventListener('click', showFixtureModal); }
-        if (closeBtn) { closeBtn.addEventListener('click', hideFixtureModal); }
-        if (cancelBtn) { cancelBtn.addEventListener('click', hideFixtureModal); }
-        if (modal) { modal.addEventListener('click', (e) => { if (e.target === modal) hideFixtureModal(); }); }
+        if (openBtn) { openBtn.addEventListener('click', showmatchModal); }
+        if (openBtnEmpty) { openBtnEmpty.addEventListener('click', showmatchModal); }
+        if (closeBtn) { closeBtn.addEventListener('click', hidematchModal); }
+        if (cancelBtn) { cancelBtn.addEventListener('click', hidematchModal); }
+        if (modal) { modal.addEventListener('click', (e) => { if (e.target === modal) hidematchModal(); }); }
 
         // Form Submit Listener (Create)
         if (form && submitBtn) {
@@ -521,9 +622,9 @@
         }
 
         // Modal Edit Listeners
-        if (closeEditBtn) { closeEditBtn.addEventListener('click', hideEditFixtureModal); }
-        if (cancelEditBtn) { cancelEditBtn.addEventListener('click', hideEditFixtureModal); }
-        if (editModal) { editModal.addEventListener('click', (e) => { if (e.target === editModal) hideEditFixtureModal(); }); }
+        if (closeEditBtn) { closeEditBtn.addEventListener('click', hideEditmatchModal); }
+        if (cancelEditBtn) { cancelEditBtn.addEventListener('click', hideEditmatchModal); }
+        if (editModal) { editModal.addEventListener('click', (e) => { if (e.target === editModal) hideEditmatchModal(); }); }
         
         // Form Submit Listener (Edit)
         if (editForm && editSubmitBtn) {
@@ -537,6 +638,11 @@
         // Filter Listener
         if (categoryFilterSelect) {
             categoryFilterSelect.addEventListener('change', filterAndDisplayMatches);
+        }
+        
+        // Load More Listener (BARU)
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', loadMoreMatches);
         }
 
         // Listener untuk Refresh data setelah Create/Update/Delete
