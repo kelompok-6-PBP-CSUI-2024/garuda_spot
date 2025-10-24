@@ -38,6 +38,8 @@ CSRF_TRUSTED_ORIGINS = [
     "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"
 ]
 
+SITE_ID=1
+
 # Application definition
 INSTALLED_APPS = [
     'django.contrib.admin',
@@ -47,6 +49,13 @@ INSTALLED_APPS = [
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'django.contrib.humanize',
+    'django.contrib.sites',
+
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+
     'news',
     'merch',
     'accounts',
@@ -55,6 +64,23 @@ INSTALLED_APPS = [
     'forum',
     'schedule',
 ]
+
+SOCIALACCOUNT_PROVIDERS = {
+    "google" : {
+        "SCOPE" : [
+            "profile",
+            "email"
+        ],
+        "AUTH_PARAMS" : {
+            "access_type" : "online"
+        },
+        'APP': {
+            'client_id': os.getenv('GOOGLE_CLIENT_ID'),
+            'secret': os.getenv('GOOGLE_CLIENT_SECRET'),
+            'key': ''
+        }
+    }
+}
 
 LOGIN_URL = 'accounts:login'
 AUTH_USER_MODEL = "accounts.User"
@@ -69,9 +95,11 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
+
 
 ROOT_URLCONF = 'garuda_spot.urls'
 
@@ -168,3 +196,17 @@ else:
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+
+AUTHENTICATION_BACKENDS = (
+    "django.contrib.auth.backends.ModelBackend",
+    'allauth.account.auth_backends.AuthenticationBackend',
+)
+
+LOGIN_URL = 'accounts:login'
+LOGIN_REDIRECT_URL = 'news:show_main'
+LOGOUT_REDIRECT_URL = 'news:show_main'
+ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https" if PRODUCTION else "http"
+SOCIALACCOUNT_LOGIN_ON_GET = True
+USE_X_FORWARDED_HOST = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')

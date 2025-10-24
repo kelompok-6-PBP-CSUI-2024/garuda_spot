@@ -8,17 +8,22 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
     <link rel="stylesheet" href="{% static 'css/global.css' %}"/>
+    {% block head_end %}{% endblock head_end %}
   </head>
-  
-  <body class="bg-white text-gray-900 flex flex-col min-h-screen">
-    {% include 'navbar.html' %}
 
-    <main class="pt-14 flex-grow">
+  <body class="{% block body_class %}bg-white text-gray-900 flex flex-col min-h-screen{% endblock %}">
+    {% block navbar %}
+      {% include 'navbar.html' %}
+    {% endblock navbar %}
+
+    <main class="{% block main_class %}pt-14 flex-grow{% endblock %}">
       {% block content %}{% endblock content %}
-
-        {% block body_end %}{% endblock body_end %}
     </main>
 
-    {% include 'footer.html' %}
+    {% block footer %}
+      {% include 'footer.html' %}
+    {% endblock footer %}
+
+    {% block body_end %}{% endblock body_end %}
   </body>
 </html>

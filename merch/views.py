@@ -17,8 +17,6 @@ def to_int(val, default=0):
         return default
     return max(0, v)
 
-@ensure_csrf_cookie
-@login_required
 def show_merch(request):
     filter_type = request.GET.get("filter", "all")
     sort = request.GET.get("sort", "recent")
@@ -135,6 +133,7 @@ def update_merch(request, id):
     }
     return JsonResponse(data)
 
+@login_required
 def detail(request, id):
     merch = get_object_or_404(Merch, pk=id)
 

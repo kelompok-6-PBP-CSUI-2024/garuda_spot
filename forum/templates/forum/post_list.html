@@ -49,61 +49,61 @@
 {% block content %}
 <div id="forum-wrapper" class="font-sans h-full" data-initial-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}" data-has-next="{% if page_obj and page_obj.has_next %}true{% else %}false{% endif %}">
   
-  <div class="wrap max-w-6xl mx-auto px-4 h-full grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
+  <div class="wrap max-w-8xl mx-auto px-4 h-full grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
     
-    <aside class="bg-red-900 text-white flex flex-col items-start px-4 py-4 h-fit sticky top-20 rounded-lg">
+    <aside class="bg-red-900 text-white flex flex-col items-start px-4 pb-8 pt-4 h-fit sticky top-20 rounded-sm ">
 
       <h3 class="tracking-wider mb-4 font-extrabold text-center border-l-2 py-1 px-2 border-white text-lg">FORUM</h3>
       <nav class="flex flex-col space-y-1 w-full">
-        <a href="#" data-cat="all" class="js-cat block text-white py-2 px-3 opacity-90 text-center hover:opacity-100 hover:bg-red-800 rounded
-          {% if active_category == 'all' %}font-bold underline bg-red-800/50{% endif %}"> 
+        <a href="#" data-cat="all" class="js-cat block text-white py-2 px-3 opacity-90 text-start hover:opacity-100 hover:bg-red-800 rounded
+          {% if active_category == 'all' %}font-bold underline{% endif %}"> 
           Semua 
         </a>
         {% for c in categories %}
-          <a href="#" data-cat="{{ c.slug }}" class="js-cat block text-white py-2 px-3 opacity-90 text-center hover:opacity-100 hover:bg-red-800 rounded
-            {% if active_category == c.slug %}font-bold underline bg-red-800/50{% endif %}">
+          <a href="#" data-cat="{{ c.slug }}" class="js-cat block text-white py-2 px-3 opacity-90 text-start hover:opacity-100 hover:bg-red-800 rounded
+            {% if active_category == c.slug %}underline{% endif %}">
             {{ c.name }}
           </a>
         {% endfor %}
         </nav>
     </aside>
 
-    <main class="content min-w-0">
+    <main class="content min-w-0 mt-4 mx-5">
       
-      <div class="toolbar flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
+      <div class="toolbar flex flex-col sm:flex-row gap-3 items-center justify-between mb-4 pt-8 ">
         <div class="muted text-sm shrink-0">Garuda Spot - {{ year }}</div>
         <form id="search-form" class="w-full sm:w-auto">
           <input type="search" name="q" id="q" placeholder="Cari topik…" value="{{ form.q.value|default:'' }}"
-                 class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
+                 class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-sm text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
           <input type="hidden" name="category" id="category" value="{{ active_category }}">
         </form>
       </div>
 
-      <form id="post-create-form" class="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm space-y-3">
+      <form id="post-create-form" class="bg-white border border-gray-200 rounded-sm p-4 mb-4 shadow-sm space-y-3">
         {% csrf_token %}
         <input type="text" name="title" placeholder="Judul" required
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+               class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
         <input type="text" name="author_name" placeholder="Penulis (opsional)"
-               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+               class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
         <select name="category" required
-                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+                class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
           <option value="">-- Pilih Kategori --</option>
           {% for c in categories %}
             <option value="{{ c.id }}" {% if active_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
           {% endfor %}
         </select>
         <textarea name="body" rows="4" placeholder="Tulis isi post…" required
-                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                  class="w-full px-3 py-2 border border-gray-300 rounded-sm text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
         
         <div class="flex justify-between items-center pt-2">
-           <button type="submit" class="border border-transparent rounded-lg px-4 py-2 bg-red-700 text-white cursor-pointer hover:bg-red-800 font-semibold transition-colors">
+           <button type="submit" class="border border-transparent rounded-sm px-4 py-2 bg-red-700 text-white cursor-pointer hover:bg-red-800 font-semibold transition-colors">
              Send
            </button>
            <span id="post-create-msg" class="muted text-sm"></span>
         </div>
       </form>
 
-      <div id="post-list" class="bg-white rounded-lg border border-gray-200 shadow-sm px-4">
+      <div id="post-list" class="bg-white rounded-sm border border-gray-200 shadow-sm px-4">
         {% for p in posts %}
           {% include "forum/_post_card.html" with p=p liked_ids=liked_ids %}
         {% empty %}
@@ -112,7 +112,7 @@
       </div>
 
       <button id="load-more" 
-              class="loadmore block my-5 mx-auto border border-gray-300 px-4 py-2 rounded-lg bg-white cursor-pointer hover:bg-gray-50 font-medium text-gray-700"
+              class="loadmore block my-5 mx-auto border border-gray-300 px-4 py-2 rounded-sm bg-white cursor-pointer hover:bg-gray-50 font-medium text-gray-700"
               {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
         Load More
       </button>

@@ -21,6 +21,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("", include("news.urls", namespace="news")),
     path("accounts/", include("accounts.urls", namespace="accounts")),
+    path('accounts/', include('allauth.urls')),
     path("merch/", include("merch.urls", namespace="merch")),
     path("squad/", include("squad.urls", namespace="squad")),
     path("tickets/", include("ticket.urls", namespace="tickets")),
