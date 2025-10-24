@@ -7,14 +7,17 @@ from django.views.decorators.http import require_POST
 from django.utils.html import strip_tags
 
 from .models import TicketMatch, TicketLink
+from .forms import TicketMatchForm, TicketLinkForm
 
 
 def main_view(request):
-    return render(request, "tickets_main.html")
+    return render(request, "tickets_main.html", {"user": request.user})
 
 
 # ----- Forms (HTML fragments for modals) -----
 def form_match(request, match_uuid=None):
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse("FORBIDDEN", status=403)
     instance = None
     if match_uuid:
         instance = get_object_or_404(TicketMatch, match_id=match_uuid)
@@ -22,6 +25,8 @@ def form_match(request, match_uuid=None):
 
 
 def form_link(request, match_uuid):
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse("FORBIDDEN", status=403)
     match = get_object_or_404(TicketMatch, match_id=match_uuid)
     return render(request, "gen_tick_link.html", {"match": match})
 
@@ -30,90 +35,66 @@ def form_link(request, match_uuid):
 @csrf_exempt
 @require_POST
 def create_ticket_ajax(request):
-    team1 = strip_tags(request.POST.get("team1", "")).strip()
-    team2 = strip_tags(request.POST.get("team2", "")).strip()
-    img_team1 = request.POST.get("img_team1", "").strip()
-    img_team2 = request.POST.get("img_team2", "").strip()
-    img_cup = request.POST.get("img_cup", "").strip() or None
-    place = strip_tags(request.POST.get("place", "")).strip() or None
-    date = request.POST.get("date", "").strip()
-
-    if not (team1 and team2 and img_team1 and img_team2 and date):
-        return HttpResponse(b"INVALID", status=400)
-
-    TicketMatch.objects.create(
-        team1=team1,
-        team2=team2,
-        img_team1=img_team1,
-        img_team2=img_team2,
-        img_cup=img_cup,
-        place=place,
-        date=date,
-    )
-    return HttpResponse(b"CREATED", status=201)
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse(b"FORBIDDEN", status=403)
+    form = TicketMatchForm(request.POST)
+    if form.is_valid():
+        form.save()
+        return HttpResponse(b"CREATED", status=201)
+    return HttpResponse(b"INVALID", status=400)
 
 
 @csrf_exempt
 @require_POST
 def edit_ticket_ajax(request, id):
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse(b"FORBIDDEN", status=403)
     match = get_object_or_404(TicketMatch, match_id=id)
-    team1 = strip_tags(request.POST.get("team1", match.team1)).strip()
-    team2 = strip_tags(request.POST.get("team2", match.team2)).strip()
-    img_team1 = request.POST.get("img_team1", match.img_team1).strip()
-    img_team2 = request.POST.get("img_team2", match.img_team2).strip()
-    img_cup = request.POST.get("img_cup", match.img_cup or "").strip() or None
-    place = strip_tags(request.POST.get("place", match.place or "")).strip() or None
-    date = request.POST.get("date", str(match.date)).strip()
-
-    match.team1 = team1
-    match.team2 = team2
-    match.img_team1 = img_team1
-    match.img_team2 = img_team2
-    match.img_cup = img_cup
-    match.place = place
-    match.date = date
-    match.save()
-    return HttpResponse(b"UPDATED", status=200)
+    form = TicketMatchForm(request.POST, instance=match)
+    if form.is_valid():
+        form.save()
+        return HttpResponse(b"UPDATED", status=200)
+    return HttpResponse(b"INVALID", status=400)
 
 
 @csrf_exempt
 @require_POST
 def create_link_ajax(request, match_uuid):
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse(b"FORBIDDEN", status=403)
     match = get_object_or_404(TicketMatch, match_id=match_uuid)
-    vendor = strip_tags(request.POST.get("vendor", "")).strip()
-    vendor_link = request.POST.get("vendor_link", "").strip()
-    img_vendor = request.POST.get("img_vendor", "").strip()
-    try:
-        price = int(request.POST.get("price", 0))
-    except ValueError:
-        price = 0
-
-    if not (vendor and vendor_link and img_vendor and price >= 0):
-        return HttpResponse(b"INVALID", status=400)
-
-    TicketLink.objects.create(
-        match=match,
-        vendor=vendor,
-        vendor_link=vendor_link,
-        price=price,
-        img_vendor=img_vendor,
-    )
-    return HttpResponse(b"CREATED", status=201)
+    form = TicketLinkForm(request.POST)
+    if form.is_valid():
+        link = form.save(commit=False)
+        link.match = match
+        link.save()
+        return HttpResponse(b"CREATED", status=201)
+    return HttpResponse(b"INVALID", status=400)
 
 
 # ----- Non-AJAX delete endpoints (redirect back) -----
 @csrf_exempt
 def delete_ticket(request, id):
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse(b"FORBIDDEN", status=403)
     match = get_object_or_404(TicketMatch, match_id=id)
     match.delete()
-    return HttpResponseRedirect(reverse("ticket:main_view"))
+    return HttpResponseRedirect(reverse("tickets:main_view"))
 
 
 @csrf_exempt
 def delete_link(request, id):
+    if not (request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)):
+        return HttpResponse(b"FORBIDDEN", status=403)
     link = get_object_or_404(TicketLink, link_id=id)
     link.delete()
-    return HttpResponseRedirect(reverse("ticket:main_view"))
+    return HttpResponseRedirect(reverse("tickets:main_view"))
+
+
+def ticket_detail(request, match_uuid):
+    match = get_object_or_404(TicketMatch, match_id=match_uuid)
+    links = TicketLink.objects.filter(match=match).order_by("id")
+    return render(request, "ticket_detail.html", {"match": match, "links": links, "user": request.user})
 
 
 # ----- Show endpoints -----
