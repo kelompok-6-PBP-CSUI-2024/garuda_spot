@@ -1,29 +1,13 @@
-# --- Core Framework ---
-Django>=5.0,<6.0
-
-# --- Deployment / Production ---
-gunicorn>=21.2.0
-whitenoise>=6.7.0
-dj-database-url>=2.2.0
-python-dotenv>=1.0.1
-psycopg2-binary>=2.9.9
-
-# --- Common Dependencies ---
-requests>=2.32.0
-urllib3>=2.2.2
-pillow>=10.3.0     # Required for ImageField / image upload
-
-# --- API and Security ---
-djangorestframework>=3.15.2
-django-cors-headers>=4.3.1
-
-# --- (Optional but Helpful) ---
-tzdata>=2024.1          # Fix timezone issues on Windows/containers
-brotli>=1.1.0           # Faster static compression for whitenoise
-
-# --- (Development Utilities) ---
-black>=24.4.2           # Code formatter
-isort>=5.13.2           # Import sorter
-flake8>=7.1.0           # Linter
-django-extensions>=3.2.3  # Cool dev commands
-pytest-django>=4.8.0     # Django testing support
+asgiref==3.10.0
+certifi==2025.10.5
+charset-normalizer==3.4.4
+Django==5.2.7
+django-allauth==65.12.1
+idna==3.11
+oauthlib==3.3.1
+python-dotenv==1.1.1
+requests==2.32.5
+requests-oauthlib==2.0.0
+sqlparse==0.5.3
+urllib3==2.5.0
+whitenoise==6.11.0
