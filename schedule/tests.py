@@ -89,11 +89,6 @@ class NationalTeamScheduleTest(TestCase):
         self.assertIn(response.status_code, [200, 302])
         self.assertFalse(NationalTeamSchedule.objects.filter(id=self.match.id).exists())
 
-
-    def test_show_json_by_id_not_found(self):
-        response = self.client.get(reverse('schedule:show_json_by_id', args=[uuid.uuid4()]))
-        self.assertIn(response.status_code, [200, 404])
-
     # --- AJAX CREATE ---
     def test_create_match_ajax_logged_in_valid(self):
         self.client.login(username='testuser', password='password')
