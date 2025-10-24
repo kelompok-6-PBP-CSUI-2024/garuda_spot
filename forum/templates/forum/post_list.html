@@ -13,7 +13,7 @@
       @apply text-sm text-gray-500 flex flex-wrap items-center gap-x-3;
     }
     .meta span:first-child {
-      @apply font-bold text-gray-800; /* penulis bold */
+      @apply font-bold text-gray-800; 
     }
     .title {
       @apply text-lg font-extrabold my-1.5 overflow-visible break-words text-gray-900;
@@ -97,7 +97,7 @@
         
         <div class="flex justify-between items-center pt-2">
            <button type="submit" class="border border-transparent rounded-lg px-4 py-2 bg-red-700 text-white cursor-pointer hover:bg-red-800 font-semibold transition-colors">
-             Kirim Post
+             Send
            </button>
            <span id="post-create-msg" class="muted text-sm"></span>
         </div>
@@ -114,7 +114,7 @@
       <button id="load-more" 
               class="loadmore block my-5 mx-auto border border-gray-300 px-4 py-2 rounded-lg bg-white cursor-pointer hover:bg-gray-50 font-medium text-gray-700"
               {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
-        Muat lebih banyak
+        Load More
       </button>
     </main>
   </div> 
@@ -127,7 +127,6 @@
 {% block body_end %}
   <script>
   (function(){
-    /* CSRF helper */
     function getCookie(name){
       const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
       return m ? m.pop() : '';
@@ -156,17 +155,17 @@
     }
     
     function render(html, append=false){
-      if (!append) { // Untuk filter/search (mengganti)
+      if (!append) {
           if (!html.trim()) {
               listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
           } else {
               listEl.innerHTML = html;
           }
-      } else { // Untuk prepend (post baru) atau append (load more)
+      } else { 
           const emptyMsg = listEl.querySelector('.muted');
           if (emptyMsg) emptyMsg.remove();
           
-          if (opts.prepend) { // 'opts' tidak terdefinisi di sini, perbaiki
+          if (opts.prepend) {
             listEl.insertAdjacentHTML('afterbegin', html);
           } else {
             listEl.insertAdjacentHTML('beforeend', html);
@@ -174,7 +173,6 @@
       }
     }
 
-    // Versi render yang lebih baik
     function renderPosts(html, mode = 'replace') {
         const emptyMsg = listEl.querySelector('.muted');
         if (emptyMsg) emptyMsg.remove();
@@ -195,9 +193,6 @@
     
     function updateLoadMore(show){ loadBtn.hidden = !show; }
 
-    /* === Event Listeners === */
-
-    /* Like / Unlike (toggle) */
     listEl.addEventListener('click', function(e){
       const btn = e.target.closest('.btn-like');
       if (!btn) return;
@@ -219,21 +214,19 @@
       .catch(() => {});
     });
 
-    /* Submit post baru */
     postForm.addEventListener('submit', (e)=>{
       e.preventDefault();
       postMsg.textContent = 'Mengirim…';
       const formData = new FormData(postForm);
       
-      // === PERBAIKAN: Hapus header 'X-CSRFToken' ===
       fetch("{% url 'forum:post_create' %}", {
         method: 'POST',
-        headers: {'X-Requested-With':'XMLHttpRequest'}, // <-- TOKEN DIHAPUS DARI SINI
+        headers: {'X-Requested-With':'XMLHttpRequest'}, 
         body: formData
       }).then(r=>r.json())
         .then(data=>{
           if(data.ok && data.html){
-            renderPosts(data.html, 'prepend'); // Gunakan fungsi render yang baru
+            renderPosts(data.html, 'prepend');
             postForm.reset();
             postMsg.textContent = 'Terkirim!';
             setTimeout(()=>postMsg.textContent='', 1200);
@@ -246,7 +239,6 @@
     document.querySelectorAll('.js-cat').forEach(a => {
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        // Perbarui tampilan link
         document.querySelectorAll('.js-cat').forEach(x => {
             x.classList.remove('font-bold', 'underline', 'bg-red-800/50');
         });
@@ -255,34 +247,32 @@
         catInput.value = a.dataset.cat;
         page = 1;
         fetchList({page}).then(({html, has_next}) => {
-          renderPosts(html, 'replace'); // Gunakan fungsi render yang baru
+          renderPosts(html, 'replace'); 
           updateLoadMore(Boolean(has_next));
           history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
         });
       });
     });
 
-    /* Search (debounce) */
     let t;
     qEl.addEventListener('input', ()=>{
       clearTimeout(t);
       t = setTimeout(()=>{
         page = 1;
         fetchList({page}).then(({html, has_next}) => {
-          renderPosts(html, 'replace'); // Gunakan fungsi render yang baru
+          renderPosts(html, 'replace');
           updateLoadMore(Boolean(has_next));
           history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
         });
       }, 320);
     });
 
-    /* Load more */
     loadBtn.addEventListener('click', ()=>{
       page += 1;
       loadBtn.disabled = true;
       loadBtn.textContent = 'Memuat...';
       fetchList({page}).then(({html, has_next}) => {
-        renderPosts(html, 'append'); // Gunakan fungsi render yang baru
+        renderPosts(html, 'append');
         updateLoadMore(Boolean(has_next));
       }).catch(()=>{ 
         page -= 1; 
@@ -291,8 +281,6 @@
         loadBtn.textContent = 'Muat lebih banyak';
       });
     });
-
-    /* Inisialisasi Tombol Load More */
     updateLoadMore(wrapper.getAttribute('data-has-next') === 'true');
     
   })();

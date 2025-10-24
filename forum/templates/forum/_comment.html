@@ -4,5 +4,18 @@
     <strong>{{ c.author_name }}</strong> • {{ c.created_at|date:"d M Y H:i" }}
   </div>
   <div>{{ c.body|linebreaksbr }}</div>
+
+  {% if request.user.is_authenticated and request.user.is_superuser %}
+    <form action="{% url 'forum:delete_comment' c.id %}"
+          method="POST"
+          style="margin-top:5px;">
+      {% csrf_token %}
+      <button type="submit"
+              class="text-red-600 text-sm hover:underline">
+        Delete
+      </button>
+    </form>
+  {% endif %}
+
   <hr style="border:none;border-top:1px solid #eee;margin:10px 0">
 </div>
