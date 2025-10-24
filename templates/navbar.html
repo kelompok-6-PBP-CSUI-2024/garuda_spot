@@ -76,7 +76,7 @@
          href="{% url 'forum:post_list' %}">Forum</a>
 
       <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.path == '/ticket/' %}active-link{% endif %}" 
-         href="">Ticket</a>
+         href="{% url 'tickets:main_view' %}">Ticket</a>
 
       <a class="nav-link-desktop px-2 -py-2 text-gray-400 hover:text-red-600 {% if request.resolver_match.app_name == 'merch' %}active-link{% endif %}" 
          href="{% url 'merch:show_merch' %}">Merch</a>
