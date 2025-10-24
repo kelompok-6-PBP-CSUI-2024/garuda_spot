@@ -1,146 +1,130 @@
-{# forum/templates/forum/post_list.html #}
+{% extends 'base.html' %}
 {% load static %}
-{% if partial %}
-  {% for p in posts %}
-    {% include "forum/_post_card.html" with p=p %}
-  {% empty %}
-    <p class="muted">Belum ada posting.</p>
-  {% endfor %}
-{% else %}
-<!DOCTYPE html>
-<html lang="id">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Garuda Spot</title>
-  <link rel="stylesheet" href="{% static 'forum/forum.css' %}">
-  <style>
-    /* ===== Layout ===== */
-    body{
-      font-family:system-ui,-apple-system,Segoe UI,Roboto,Ubuntu,'Helvetica Neue',Arial,sans-serif;
+
+{# 
+   <head>
+#}
+{% block meta %}
+  <style type="text/tailwindcss">
+    .card {
+      @apply border-t border-red-200 pt-6 pb-4 box-border overflow-visible min-w-0;
     }
-    .wrap{
-      display:grid;
-      grid-template-columns:minmax(0,1fr) 160px;   /* konten | sidebar */
-      grid-template-areas:"content sidebar";
-      gap:24px; max-width:1100px; margin:0 auto; padding:16px;
+    .meta {
+      @apply text-sm text-gray-500 flex flex-wrap items-center gap-x-3;
     }
-    .content{ grid-area:content; min-width:0; overflow:visible; }
-    #post-list{ min-width:0; overflow:visible; }
-    .sidebar{ grid-area:sidebar; }
-
-    /* ===== Sidebar ===== */
-    .sidebar{ background:#8c1d1d; color:#fff; border-radius:10px; padding:10px; }
-    .sidebar h3{ letter-spacing:.08em; margin:20px 0 16px; font-weight:800; text-align:center; }
-    .sidebar a{ display:block; color:#fff; text-decoration:none; padding:8px 0; opacity:.9; text-align:center; }
-    .sidebar a.active{ font-weight:700; text-decoration:underline; }
-
-    /* ===== Form post ===== */
-    .post-form{ border:1px solid #eee; border-radius:12px; padding:12px 14px; margin-bottom:14px; background:#8c1d1d; box-shadow:0 4px 12px rgba(0,0,0,.25); }
-    .post-form input,.post-form textarea,.post-form select{
-      width:100%; max-width:100%; box-sizing:border-box; margin:6px 0; padding:8px 10px;
-      border:1px solid #e5e7eb; border-radius:8px;
+    .meta span:first-child {
+      @apply font-bold text-gray-800; /* penulis bold */
     }
-
-    /* ===== Toolbar ===== */
-    .toolbar{ display:flex; gap:10px; align-items:center; justify-content:space-between; margin-bottom:14px; }
-    .toolbar input,.toolbar select{ padding:8px 10px; border:1px solid #e5e7eb; border-radius:8px; }
-
-    /* ===== Card & teks: anti kepotong ===== */
-    .card{
-      border-top:1px solid #f2b3b3;
-      padding:22px 12px 18px 0;
-      box-sizing:border-box;
-      overflow:visible;
-      min-width:0;
+    .title {
+      @apply text-lg font-extrabold my-1.5 overflow-visible break-words text-gray-900;
     }
-    .meta{ font-size:13px; color:#6b7280; display:flex; gap:10px; }
-    .meta span:first-child{ font-weight:700; } /* penulis bold */
-
-    .title{
-      font-size:18px; font-weight:800; margin:6px 0 6px;
-      overflow:visible;
-      overflow-wrap:anywhere; word-break:break-word;
+    .card p, .muted {
+      @apply text-gray-500 whitespace-normal overflow-visible break-words max-w-full;
     }
-    .card p, .muted{
-      color:#6b7280; white-space:normal;
-      overflow:visible; overflow-wrap:anywhere; word-break:break-word;
-      max-width:100%; padding-right:8px;
+    .right-tag {
+      @apply ml-auto text-red-500 static shadow-lg;
     }
-    .right-tag{ margin-left:auto; color:#ef4444; position:static; box-shadow:0 4px 12px rgba(0,0,0,.25); }
-
-    .likebar{ display:flex; align-items:center; gap:10px; margin-top:8px; }
-    .btn-like{ border:none; background:transparent; cursor:pointer; line-height:1; transition:transform .15s ease-in-out; }
-    .btn-like:hover{ transform:scale(1.1); }
-    .btn-like .heart{ font-size:20px; color:#ccc; }
-    .btn-like.liked .heart{ color:#8c1d1d; }               
-
-    /* ===== Misc ===== */
-    .btn{ border:1px solid #e5e7eb; border-radius:10px; padding:8px 12px; background:#fff; cursor:pointer; }
-    .loadmore{ display:block; margin:20px auto; border:1px solid #e5e7eb; padding:10px 14px; border-radius:10px; background:#fff; cursor:pointer; }
-
-    .post-text{
-  white-space: pre-wrap;      /* newline tetap tampil, dan baris panjang ikut wrap */
-  overflow-wrap: anywhere;    /* kata super panjang tetap patah */
-  word-break: break-word;
-  max-width: 100%;
-  color: #6b7280;
-  margin: 6px 0 0;
-}
+    .likebar {
+      @apply flex items-center gap-2 mt-2;
+    }
+    .btn-like {
+      @apply bg-transparent cursor-pointer leading-none transition duration-150 ease-in-out hover:scale-110;
+    }
+    .btn-like .heart {
+      @apply text-xl text-gray-300;
+    }
+    .btn-like.liked .heart {
+      @apply text-red-800;
+    }
+    .post-text {
+      @apply whitespace-pre-wrap break-words max-w-full text-gray-600 mt-1.5;
+    }
   </style>
-</head>
-<body
-  data-initial-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}"
-  data-has-next="{% if page_obj and page_obj.has_next %}true{% else %}false{% endif %}"
->
-  <div class="wrap">
-    <aside class="sidebar">
-      <h3>FORUM</h3>
-      <a href="#" data-cat="all" class="js-cat {% if active_category == 'all' %}active{% endif %}">Semua</a>
-      {% for c in categories %}
-        <a href="#" data-cat="{{ c.slug }}" class="js-cat {% if active_category == c.slug %}active{% endif %}">{{ c.name }}</a>
-      {% endfor %}
+{% endblock meta %}
+
+
+{# 
+  BLOCK INI BERISI SEMUA KONTEN HALAMAN ANDA 
+#}
+{% block content %}
+<div id="forum-wrapper" class="font-sans h-full" data-initial-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}" data-has-next="{% if page_obj and page_obj.has_next %}true{% else %}false{% endif %}">
+  
+  <div class="wrap max-w-6xl mx-auto px-4 h-full grid grid-cols-1 md:grid-cols-[200px_1fr] gap-6">
+    
+    <aside class="bg-red-900 text-white flex flex-col items-start px-4 py-4 h-fit sticky top-20 rounded-lg">
+
+      <h3 class="tracking-wider mb-4 font-extrabold text-center border-l-2 py-1 px-2 border-white text-lg">FORUM</h3>
+      <nav class="flex flex-col space-y-1 w-full">
+        <a href="#" data-cat="all" class="js-cat block text-white py-2 px-3 opacity-90 text-center hover:opacity-100 hover:bg-red-800 rounded
+          {% if active_category == 'all' %}font-bold underline bg-red-800/50{% endif %}"> 
+          Semua 
+        </a>
+        {% for c in categories %}
+          <a href="#" data-cat="{{ c.slug }}" class="js-cat block text-white py-2 px-3 opacity-90 text-center hover:opacity-100 hover:bg-red-800 rounded
+            {% if active_category == c.slug %}font-bold underline bg-red-800/50{% endif %}">
+            {{ c.name }}
+          </a>
+        {% endfor %}
+        </nav>
     </aside>
 
-    <main class="content">
-      <div class="toolbar">
-        <div class="muted">Garuda Spot - {{ year }}</div>
-        <form id="search-form">
-          <input type="search" name="q" id="q" placeholder="Cari topik…" value="{{ form.q.value|default:'' }}">
+    <main class="content min-w-0">
+      
+      <div class="toolbar flex flex-col sm:flex-row gap-3 items-center justify-between mb-4">
+        <div class="muted text-sm shrink-0">Garuda Spot - {{ year }}</div>
+        <form id="search-form" class="w-full sm:w-auto">
+          <input type="search" name="q" id="q" placeholder="Cari topik…" value="{{ form.q.value|default:'' }}"
+                 class="w-full sm:w-auto px-3 py-2 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-red-500">
           <input type="hidden" name="category" id="category" value="{{ active_category }}">
         </form>
       </div>
 
-      {# Form buat nulis post (AJAX) #}
-      <form id="post-create-form" class="post-form">
+      <form id="post-create-form" class="bg-white border border-gray-200 rounded-xl p-4 mb-4 shadow-sm space-y-3">
         {% csrf_token %}
-        <input type="text" name="title" placeholder="Judul" required>
-        <input type="text" name="author_name" placeholder="Penulis (opsional)">
-        <select name="category" required>
+        <input type="text" name="title" placeholder="Judul" required
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+        <input type="text" name="author_name" placeholder="Penulis (opsional)"
+               class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
+        <select name="category" required
+                class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500">
           <option value="">-- Pilih Kategori --</option>
           {% for c in categories %}
             <option value="{{ c.id }}" {% if active_category == c.slug %}selected{% endif %}>{{ c.name }}</option>
           {% endfor %}
         </select>
-        <textarea name="body" rows="4" placeholder="Tulis isi post…" required></textarea>
-        <button type="submit" class="btn">Kirim Post</button>
-        <span id="post-create-msg" class="muted"></span>
+        <textarea name="body" rows="4" placeholder="Tulis isi post…" required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-lg text-gray-900 focus:outline-none focus:ring-2 focus:ring-red-500"></textarea>
+        
+        <div class="flex justify-between items-center pt-2">
+           <button type="submit" class="border border-transparent rounded-lg px-4 py-2 bg-red-700 text-white cursor-pointer hover:bg-red-800 font-semibold transition-colors">
+             Kirim Post
+           </button>
+           <span id="post-create-msg" class="muted text-sm"></span>
+        </div>
       </form>
 
-      <div id="post-list">
+      <div id="post-list" class="bg-white rounded-lg border border-gray-200 shadow-sm px-4">
         {% for p in posts %}
-          {% include "forum/_post_card.html" with p=p %}
+          {% include "forum/_post_card.html" with p=p liked_ids=liked_ids %}
         {% empty %}
-          <p class="muted">Belum ada posting.</p>
+          <p class="muted p-6 text-center">Belum ada posting.</p>
         {% endfor %}
       </div>
 
-      <button id="load-more" class="loadmore" {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
+      <button id="load-more" 
+              class="loadmore block my-5 mx-auto border border-gray-300 px-4 py-2 rounded-lg bg-white cursor-pointer hover:bg-gray-50 font-medium text-gray-700"
+              {% if not page_obj or not page_obj.has_next %}hidden{% endif %}>
         Muat lebih banyak
       </button>
     </main>
-  </div>
+  </div> 
+</div> 
+{% endblock content %}
 
+{# 
+  BLOCK INI MENAMBAHKAN JAVASCRIPT KE HALAMAN
+#}
+{% block body_end %}
   <script>
   (function(){
     /* CSRF helper */
@@ -148,37 +132,7 @@
       const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
       return m ? m.pop() : '';
     }
-    const csrftoken = getCookie('csrftoken');
-
-    /* Like / Unlike (toggle) */
-    document.getElementById('post-list').addEventListener('click', function(e){
-      const btn = e.target.closest('.btn-like');
-      if (!btn) return;
-
-      const card = btn.closest('.card');
-      const slug = card?.dataset?.slug;
-      if (!slug) return;
-
-      fetch(`{% url 'forum:post_like' 'SLUG_PLACEHOLDER' %}`.replace('SLUG_PLACEHOLDER', slug), {
-        method: 'POST',
-        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrftoken }
-      })
-      .then(r => r.json())
-      .then(data => {
-        if (!data.ok) return;
-        const heartEl = btn.querySelector('.heart');
-        const countEl = card.querySelector('.like-count');
-        if (countEl) countEl.textContent = data.like_count;
-
-        /* pakai simbol supaya bisa diwarnai via CSS */
-      if (data.liked) {
-        btn.classList.add('liked');
-      } else {
-        btn.classList.remove('liked');
-      }
-      })
-      .catch(() => {});
-    });
+    const csrftoken = getCookie('csrftoken'); 
 
     const listEl = document.getElementById('post-list');
     const loadBtn = document.getElementById('load-more');
@@ -186,8 +140,8 @@
     const catInput = document.getElementById('category');
     const postForm = document.getElementById('post-create-form');
     const postMsg = document.getElementById('post-create-msg');
-
-    const initialPageAttr = document.body.getAttribute('data-initial-page');
+    const wrapper = document.getElementById('forum-wrapper'); 
+    const initialPageAttr = wrapper.getAttribute('data-initial-page');
     let page = parseInt(initialPageAttr || '1', 10);
 
     function fetchList(opts={}){
@@ -200,46 +154,108 @@
       return fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' }})
         .then(r => r.json());
     }
+    
     function render(html, append=false){
-      if(append) listEl.insertAdjacentHTML('afterbegin', html); /* prepend post baru */
-      else listEl.innerHTML = html;
+      if (!append) { // Untuk filter/search (mengganti)
+          if (!html.trim()) {
+              listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
+          } else {
+              listEl.innerHTML = html;
+          }
+      } else { // Untuk prepend (post baru) atau append (load more)
+          const emptyMsg = listEl.querySelector('.muted');
+          if (emptyMsg) emptyMsg.remove();
+          
+          if (opts.prepend) { // 'opts' tidak terdefinisi di sini, perbaiki
+            listEl.insertAdjacentHTML('afterbegin', html);
+          } else {
+            listEl.insertAdjacentHTML('beforeend', html);
+          }
+      }
     }
+
+    // Versi render yang lebih baik
+    function renderPosts(html, mode = 'replace') {
+        const emptyMsg = listEl.querySelector('.muted');
+        if (emptyMsg) emptyMsg.remove();
+
+        if (mode === 'replace') {
+            if (!html.trim()) {
+                listEl.innerHTML = '<p class="muted p-6 text-center">Tidak ada posting yang cocok.</p>';
+            } else {
+                listEl.innerHTML = html;
+            }
+        } else if (mode === 'append') {
+            listEl.insertAdjacentHTML('beforeend', html);
+        } else if (mode === 'prepend') {
+            listEl.insertAdjacentHTML('afterbegin', html);
+        }
+    }
+
+    
     function updateLoadMore(show){ loadBtn.hidden = !show; }
+
+    /* === Event Listeners === */
+
+    /* Like / Unlike (toggle) */
+    listEl.addEventListener('click', function(e){
+      const btn = e.target.closest('.btn-like');
+      if (!btn) return;
+      const card = btn.closest('.card');
+      const slug = card?.dataset?.slug;
+      if (!slug) return;
+      fetch(`{% url 'forum:post_like' 'SLUG_PLACEHOLDER' %}`.replace('SLUG_PLACEHOLDER', slug), {
+        method: 'POST',
+        headers: { 'X-Requested-With': 'XMLHttpRequest', 'X-CSRFToken': csrftoken }
+      })
+      .then(r => r.json())
+      .then(data => {
+        if (!data.ok) return;
+        const countEl = card.querySelector('.like-count');
+        if (countEl) countEl.textContent = data.like_count;
+        if (data.liked) btn.classList.add('liked');
+        else btn.classList.remove('liked');
+      })
+      .catch(() => {});
+    });
 
     /* Submit post baru */
     postForm.addEventListener('submit', (e)=>{
       e.preventDefault();
       postMsg.textContent = 'Mengirim…';
       const formData = new FormData(postForm);
+      
+      // === PERBAIKAN: Hapus header 'X-CSRFToken' ===
       fetch("{% url 'forum:post_create' %}", {
         method: 'POST',
-        headers: {'X-Requested-With':'XMLHttpRequest', 'X-CSRFToken': csrftoken},
+        headers: {'X-Requested-With':'XMLHttpRequest'}, // <-- TOKEN DIHAPUS DARI SINI
         body: formData
       }).then(r=>r.json())
         .then(data=>{
-          if(data.ok){
-            render(data.html, true);
+          if(data.ok && data.html){
+            renderPosts(data.html, 'prepend'); // Gunakan fungsi render yang baru
             postForm.reset();
-            const sel = postForm.querySelector('select[name=category]');
-            if (sel && catInput.value !== 'all') sel.value = '';
             postMsg.textContent = 'Terkirim!';
             setTimeout(()=>postMsg.textContent='', 1200);
           }else{
-            postMsg.textContent = 'Gagal: ' + JSON.stringify(data.errors);
+            postMsg.textContent = 'Gagal: ' + (data.errors ? JSON.stringify(data.errors) : 'Error');
           }
         }).catch(()=> postMsg.textContent = 'Gagal jaringan');
     });
 
-    /* Sidebar filter */
     document.querySelectorAll('.js-cat').forEach(a => {
       a.addEventListener('click', (e) => {
         e.preventDefault();
-        document.querySelectorAll('.js-cat').forEach(x=>x.classList.remove('active'));
-        a.classList.add('active');
+        // Perbarui tampilan link
+        document.querySelectorAll('.js-cat').forEach(x => {
+            x.classList.remove('font-bold', 'underline', 'bg-red-800/50');
+        });
+        a.classList.add('font-bold', 'underline', 'bg-red-800/50');
+        
         catInput.value = a.dataset.cat;
         page = 1;
         fetchList({page}).then(({html, has_next}) => {
-          listEl.innerHTML = html;
+          renderPosts(html, 'replace'); // Gunakan fungsi render yang baru
           updateLoadMore(Boolean(has_next));
           history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
         });
@@ -253,7 +269,7 @@
       t = setTimeout(()=>{
         page = 1;
         fetchList({page}).then(({html, has_next}) => {
-          listEl.innerHTML = html;
+          renderPosts(html, 'replace'); // Gunakan fungsi render yang baru
           updateLoadMore(Boolean(has_next));
           history.replaceState(null, '', `?category=${catInput.value}&q=${encodeURIComponent(qEl.value)}`);
         });
@@ -263,15 +279,22 @@
     /* Load more */
     loadBtn.addEventListener('click', ()=>{
       page += 1;
+      loadBtn.disabled = true;
+      loadBtn.textContent = 'Memuat...';
       fetchList({page}).then(({html, has_next}) => {
-        listEl.insertAdjacentHTML('beforeend', html);
+        renderPosts(html, 'append'); // Gunakan fungsi render yang baru
         updateLoadMore(Boolean(has_next));
-      }).catch(()=>{ page -= 1; });
+      }).catch(()=>{ 
+        page -= 1; 
+      }).finally(() => {
+        loadBtn.disabled = false;
+        loadBtn.textContent = 'Muat lebih banyak';
+      });
     });
 
-    updateLoadMore(document.body.getAttribute('data-has-next') === 'true');
+    /* Inisialisasi Tombol Load More */
+    updateLoadMore(wrapper.getAttribute('data-has-next') === 'true');
+    
   })();
   </script>
-</body>
-</html>
-{% endif %}
+{% endblock body_end %}

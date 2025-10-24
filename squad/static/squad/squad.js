@@ -121,46 +121,49 @@
   }
 
   // ========== FILTER ==========
-// GANTI fungsi lama kamu dengan ini
-function filterByRole(btn){
-  const role   = btn?.dataset.role || "";
-  const pills  = document.querySelectorAll("#role-filter .pill");
-  const groups = document.querySelectorAll(".role-group");
+  // Kelas-kelas styling dari jawaban sebelumnya
+  const activeClasses = ['border-red-700', 'font-semibold', 'text-gray-900'];
+  const inactiveClasses = ['border-transparent', 'font-normal', 'text-gray-500', 'hover:border-gray-300', 'hover:text-gray-700'];
 
-  const alreadyActive = btn.classList.contains("is-active");
+  function filterByRole(clickedButton) {
+    // 1. Ambil role dari tombol yang diklik
+    const role = clickedButton?.dataset.role;
+    if (!role) return; // Keluar jika tombol tidak punya data-role
 
-  // kalau tombol yang sama diklik lagi -> UNFILTER (tampilkan semua)
-  if (alreadyActive){
-    pills.forEach(b=>{
-      b.classList.remove("is-active","border-red-500");
-      b.setAttribute("aria-pressed","false");
+    // 2. Dapatkan semua tombol filter dan semua grup konten
+    const allButtons = document.querySelectorAll("#role-filter .pill");
+    const allGroups = document.querySelectorAll(".role-group");
+
+    // 3. Loop dan jadikan SEMUA tombol inaktif (gray)
+    allButtons.forEach(button => {
+      button.classList.remove(...activeClasses);
+      button.classList.add(...inactiveClasses);
+      button.setAttribute("aria-pressed", "false"); // Baik untuk aksesibilitas
     });
-    groups.forEach(sec=> sec.classList.remove("hidden"));
-    return;
+
+    // 4. Jadikan HANYA tombol yang diklik menjadi aktif (merah)
+    clickedButton.classList.remove(...inactiveClasses);
+    clickedButton.classList.add(...activeClasses);
+    clickedButton.setAttribute("aria-pressed", "true");
+
+    // 5. Tampilkan/sembunyikan grup konten berdasarkan role
+    allGroups.forEach(group => {
+      // Tampilkan jika role-nya cocok, sembunyikan jika tidak
+      group.classList.toggle("hidden", group.dataset.role !== role);
+    });
+
+    // 6. Scroll ke grup yang baru saja diaktifkan
+    document.querySelector(`.role-group[data-role="${role}"]`)
+      ?.scrollIntoView({ behavior:"smooth", block:"start" });
   }
-
-  // aktifkan filter baru
-  pills.forEach(b=>{
-    b.classList.remove("is-active","border-red-500");
-    b.setAttribute("aria-pressed","false");
-  });
-  btn.classList.add("is-active","border-red-500");
-  btn.setAttribute("aria-pressed","true");
-
-  groups.forEach(sec=>{
-    sec.classList.toggle("hidden", sec.dataset.role !== role);
-  });
-
-  document.querySelector(`.role-group[data-role="${role}"]`)
-    ?.scrollIntoView({ behavior:"smooth", block:"start" });
-}
+  // ============================
 
 
   // expose biar bisa dipanggil dari HTML onclick
   window.openCreateModal = openCreateModal;
   window.openEditModal   = openEditModal;
   window.deletePlayer    = deletePlayer;
-  window.filterByRole    = filterByRole;
+  window.filterByRole    = filterByRole; // <-- Sekarang menggunakan fungsi baru
   window.hideModal       = hideModal;
 
   // klik backdrop untuk tutup modal

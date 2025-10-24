@@ -1,29 +1,25 @@
 {# forum/templates/forum/_post_card.html #}
+{% load static %}
+  <a href="{% url 'forum:post_detail' p.slug %}" >
 <div class="card" data-slug="{{ p.slug }}">
   <div class="meta">
-    <span>{{ p.author_name|default:"Anonim" }}</span>
+    <span>{{ p.author_name|default:"Orang" }}</span>
     <span>•</span>
-    <span>{{ p.created_at|date:"l, d F Y" }}</span>
+    <span>{{ p.created_at|date:'l, d F Y' }}</span>
     <span class="right-tag">{{ p.category.name }}</span>
   </div>
+  
+<h1 class="title hover:text-red-700 transition-colors">
+    {{ p.title }}
+  </h1>
 
-  <div class="title">{{ p.title }}</div>
-
-  {# <<< INI BAGIAN PENTING: tampilkan body penuh + aman + preserve newline #}
-  <div class="post-text">{{ p.body|escape }}</div>
-
-  <div class="likebar" style="display:flex;align-items:center;gap:10px;margin-top:8px">
-    <button type="button"
-            class="btn-like {% if p.like_count|default:0 > 0 %}liked{% endif %}">
-      <span class="heart">{% if p.like_count|default:0 > 0 %}♥{% else %}♡{% endif %}</span>
+  <p class="muted">{{ p.excerpt|default:p.body|truncatechars:220 }}</p>
+  
+  <div class="likebar">
+    <button class="btn-like {% if p.id in liked_ids %}liked{% endif %}" data-slug="{{ p.slug }}">
+      <span class="heart">♥</span>
     </button>
-    <span class="like-count">{{ p.like_count|default:0 }}</span>
-
-    {% if request.user.is_authenticated and request.user.is_staff %}
-      <button type="button" class="btn-del"
-              style="margin-left:auto;border:1px solid #8c1d1d;background:#fff;color:#8c1d1d;border-radius:8px;padding:4px 10px;cursor:pointer">
-        Hapus
-      </button>
-    {% endif %}
+    <span class="like-count text-sm text-gray-500">{{ p.like_count }}</span>
   </div>
 </div>
+</a>
