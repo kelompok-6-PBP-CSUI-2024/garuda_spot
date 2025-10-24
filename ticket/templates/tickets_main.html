@@ -255,7 +255,17 @@
           const formData = new FormData(form);
           const res2 = await fetch(form.action, { method: 'POST', body: formData });
           if (res2.ok) { closeModal(); await fetchTickets(); }
-          else { showToast('Submission failed. Please try again.'); }
+          else {
+            let msg = 'Submission failed. Please try again.';
+            try {
+              const err = await res2.json();
+              if (err.errors) msg = Object.entries(err.errors)
+                .map(([k, v]) => `${k}: ${v.join(', ')}`)
+                .join('; ');
+            } catch {}
+            showToast(msg);
+          }
+
         });
       }
     } catch {}

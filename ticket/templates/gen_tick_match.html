@@ -15,15 +15,15 @@
     </div>
     <div>
       <label class="block text-sm font-medium">Image URL Team 1</label>
-      <input name="img_team1" class="w-full border rounded p-2" value="{{ match.img_team1|default_if_none:'' }}" required />
+      <input name="img_team1" class="w-full border rounded p-2" type="url" value="{{ match.img_team1|default_if_none:'' }}" required />
     </div>
     <div>
       <label class="block text-sm font-medium">Image URL Team 2</label>
-      <input name="img_team2" class="w-full border rounded p-2" value="{{ match.img_team2|default_if_none:'' }}" required />
+      <input name="img_team2" class="w-full border rounded p-2" type="url" value="{{ match.img_team2|default_if_none:'' }}" required />
     </div>
     <div>
       <label class="block text-sm font-medium">Image URL Cup (optional)</label>
-      <input name="img_cup" class="w-full border rounded p-2" value="{{ match.img_cup|default_if_none:'' }}" />
+      <input name="img_cup" class="w-full border rounded p-2" type="url" value="{{ match.img_cup|default_if_none:'' }}" />
     </div>
     <div>
       <label class="block text-sm font-medium">Place (optional)</label>
