@@ -4,7 +4,7 @@
 {% block content %}
 <div class="md:mt-20 md:mx-36 bg-white">
 
-    <h2 class="pt-12 mb-3 text-6xl font-extrabold text-center">Fixtures & Results</h2>
+    <h2 class="pt-8 pb-4 text-6xl font-extrabold text-center">Schedule</h2>
 
     <div class="flex justify-between mb-8 ml-8 mt-12">
         <form method="get" id="categoryFilterForm">
@@ -16,9 +16,11 @@
                 {% endfor %}
             </select>
         </form>
-        <div class="text-end mb-3 mr-8">
-            <button type="button" id="open-fixture-modal-btn" class="border-b-2 border-red-600 px-8 py-2 text-sm cursor-pointer">+ Fixtures</button>
-        </div>
+{% if request.user.is_authenticated and request.user.is_admin %}
+<div class="text-end mb-3 mr-8">
+    <button type="button" id="open-fixture-modal-btn" class="border-b-2 border-red-600 px-8 py-2 text-sm cursor-pointer">+ Fixtures</button>
+</div>
+{% endif %}
     </div>
 
     <div id="loading" class="bg-white py-12 text-center">
@@ -38,10 +40,7 @@
 
     <div id="empty" class="bg-white py-12 text-center hidden">
         <h3 class="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
-        <p class="text-gray-500 mb-6">There are no matches scheduled for this category.</p>
-        <button type="button" id="open-fixture-modal-btn-empty" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
-            + Add Fixture
-        </button>
+
     </div>
 
 </div>

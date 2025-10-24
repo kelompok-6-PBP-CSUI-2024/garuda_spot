@@ -44,7 +44,7 @@ def show_match(request, match_id):
 
     return render(request, "match_detail.html", {"match": match, "stats": stats})
 
-# @login_required
+@login_required
 def create_match(request):
     # (Fungsi ini untuk halaman non-AJAX, biarkan saja)
     form = NationalTeamScheduleForm(request.POST or None)
@@ -53,16 +53,16 @@ def create_match(request):
         return redirect('schedule:show_main') 
     return render(request, "create_match.html", {"form": form})
 
-# @login_required
+@login_required
 def edit_match(request, id):
     match = get_object_or_404(NationalTeamSchedule, pk=id)
     form = NationalTeamScheduleForm(request.POST or None, instance=match)
     if request.method == 'POST' and form.is_valid():
         form.save()
-        return redirect('schedule:show_match', id=match.id)
+        return redirect('schedule:show_match', match_id=match.id)
     return render(request, "edit_match.html", {"form": form, "match": match})
 
-# @login_required
+@login_required
 def delete_match(request, id):
     match = get_object_or_404(NationalTeamSchedule, pk=id)
     match.delete()
@@ -124,7 +124,7 @@ def show_json_by_id(request, match_id):
 
 @csrf_exempt
 @require_POST
-# @login_required # Uncomment if needed
+@login_required 
 def add_match_ajax(request):
     # --- 1. Extract and sanitize data ---
     home_team = strip_tags(request.POST.get("home_team", "")).strip()

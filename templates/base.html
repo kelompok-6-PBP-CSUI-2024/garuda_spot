@@ -9,14 +9,16 @@
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3.0.5/dist/purify.min.js"></script>
     <link rel="stylesheet" href="{% static 'css/global.css' %}"/>
   </head>
-  <body class="bg-white text-gray-900">
+  
+  <body class="bg-white text-gray-900 flex flex-col min-h-screen">
     {% include 'navbar.html' %}
 
-    <main class="pt-16 pb-20">
+    <main class="pt-14 flex-grow">
       {% block content %}{% endblock content %}
 
         {% block body_end %}{% endblock body_end %}
-
     </main>
+
+    {% include 'footer.html' %}
   </body>
 </html>

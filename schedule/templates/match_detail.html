@@ -3,14 +3,9 @@
 {% block content %}
 
 <div class="max-w-5xl mx-auto my-12 px-6">
-  <!-- Tombol kembali -->
-  <a href="{% url 'schedule:show_main' %}" class="inline-block text-gray-600 hover:text-gray-900 mb-6">
-    ← Kembali ke Jadwal
-  </a>
-  
 
   
-    <h2 class="text-5xl font-semibold text-gray-900 text-center my-8">
+    <h2 class="text-5xl font-bold text-gray-900 text-center my-8">
       {{ match.home_team }}
       <span class="mx-3">vs</span>
       {{ match.away_team }}
@@ -74,9 +69,9 @@
   {% endif %}
 
 
-  <div class="flex justify-end gap-3 mt-8">
-    <a href="{% url 'schedule:edit_match' match.id %}" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-md">Edit</a>
-    <a href="{% url 'schedule:delete_match' match.id %}" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md">Hapus</a>
+  <div class="flex justify-end gap-4 mt-8">
+    <a href="{% url 'schedule:edit_match' match.id %}" class="px-4 py-2 border border-gray-400 text-red-800">Edit</a>
+    <a href="{% url 'schedule:delete_match' match.id %}" class="px-4 py-2 bg-red-700 text-white">Hapus</a>
   </div>
 </div>
 

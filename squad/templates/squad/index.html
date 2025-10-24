@@ -35,14 +35,22 @@
 
 <div class="h-10"></div>
 
-<nav id="role-filter" class="relative z-20 flex flex-wrap items-center justify-center gap-3">
-  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+<nav id="role-filter" class="relative z-20 flex flex-wrap items-center justify-center gap-20">
+  
+  <button class="pill px-4 py-1 border-b-2 transition-all 
+                 border-b border-gray-200 font-normal text-gray-500 hover:border-gray-300 hover:text-gray-700"
           data-role="GOALKEEPER" onclick="filterByRole(this)">GOALKEEPER</button>
-  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+  
+  <button class="pill px-4 py-1 border-b-2 transition-all 
+                 border-b border-gray-200  font-normal text-gray-500 hover:border-gray-300 hover:text-gray-700"
           data-role="DEFENDER" onclick="filterByRole(this)">DEFENDER</button>
-  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+  
+  <button class="pill px-4 py-1 border-b-2 transition-all 
+                 border-b border-gray-200  font-normal text-gray-500 hover:border-gray-300 hover:text-gray-700"
           data-role="MIDFIELDER" onclick="filterByRole(this)">MIDFIELDER</button>
-  <button class="pill px-4 py-2 rounded-full border border-slate-200 font-semibold hover:border-red-500 transition"
+  
+  <button class="pill px-4 py-1 border-b-2 transition-all 
+                 border-b border-gray-200  font-normal text-gray-500 hover:border-gray-300 hover:text-gray-700"
           data-role="ATTACKER" onclick="filterByRole(this)">ATTACKER</button>
 </nav>
 
@@ -57,7 +65,7 @@
 </button>
   </div>
   {% endif %}
-<section id="groups" class="max-w-7xl mx-auto px-4 md:px-6 space-y-10 mt-8">
+<section id="groups" class="max-w-7xl mx-auto mb-20 px-4 md:px-6 space-y-10 mt-8">
     <section class="role-group" data-role="GOALKEEPER">
     <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">GOALKEEPER</h3>
     <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">

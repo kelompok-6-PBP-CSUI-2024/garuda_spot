@@ -2,14 +2,14 @@
 {% load static %}
 
 {% block content %}
-<section class="relative w-full select-none min-h-[20vh] sm:min-h-[22vh] md:min-h-[26vh] lg:min-h-[28vh] mb-8">
+<section class="relative w-full select-none min-h-[20vh] sm:min-h-[22vh] md:min-h-[26vh] lg:min-h-[28vh] mb-8 ">
   <div
     class="absolute inset-0 -z-10 bg-center bg-cover"
-    style="background-image:url('{% static "image/background.png" %}');">
+    style="background-image:url('{% static "images/background.png" %}');">
   </div>
   <div class="absolute inset-0 -z-10 bg-gradient-to-b from-white/85 to-red-50/60"></div>
 
-  <div class="relative z-10 h-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="relative z-10 h-full max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
     <div class="h-full flex flex-col items-center justify-center text-center py-6 sm:py-7">
       <p class="uppercase tracking-[0.35em] text-[10px] sm:text-xs text-gray-500 mb-2">Garuda Spot</p>
       <h1 class="text-2xl sm:text-3xl md:text-4xl font-extrabold tracking-tight text-gray-900">BERITA TERKINI</h1>
@@ -40,9 +40,12 @@
 
 </div>
 
-<div id="sentinel" class="h-10"></div>
-
-
+<div id="load-more-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center my-8 hidden">
+  <button id="load-more-btn"
+          class="inline-flex items-center justify-center px-6 py-3 rounded-md bg-red-600 text-white font-medium hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500/50 disabled:opacity-50 disabled:cursor-not-allowed">
+    Load More
+  </button>
+</div>
 {% if request.user.is_authenticated and request.user.is_admin %}
 <div id="add-news-modal" class="fixed inset-0 z-50 hidden items-end sm:items-center justify-center">
   <div class="absolute inset-0 bg-black/50" data-close-modal></div>
@@ -97,7 +100,11 @@
   const errorMessage = document.getElementById('error');
   const emptyStateDisplay = document.getElementById('empty');
   const newsGridContainer = document.getElementById('grid');
-  const sentinel = document.getElementById('sentinel');
+  // const sentinel = document.getElementById('sentinel'); // <-- DIHAPUS
+
+  // VARIABEL BARU UNTUK TOMBOL LOAD MORE
+  const loadMoreContainer = document.getElementById('load-more-container');
+  const loadMoreBtn = document.getElementById('load-more-btn');
 
   const modal = document.getElementById('add-news-modal');
   const openBtn = document.getElementById('open-add-news');
@@ -106,7 +113,7 @@
   const errText = document.getElementById('add-news-error');
 
   let page = 1;
-  const PAGE_SIZE = 20;
+  const PAGE_SIZE = 10;
   let isLoading = false;
   let noMore = false;
 
@@ -168,9 +175,18 @@
 
   async function fetchPage(p) {
     isLoading = true;
+    // Set tombol ke state loading
+    if (loadMoreBtn) {
+      loadMoreBtn.disabled = true;
+      loadMoreBtn.textContent = 'Loading...';
+    }
+
     const qs = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) }).toString();
     try {
-      if (p === 1) displayPageSection({ showLoading: true, showGrid: false });
+      if (p === 1) {
+        displayPageSection({ showLoading: true, showGrid: false });
+        setVis(loadMoreContainer, false); // Sembunyikan tombol saat load awal
+      }
       const res = await fetch(`${NEWS_API_ENDPOINT}?${qs}`, {
         headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
       });
@@ -179,6 +195,7 @@
 
       if (p === 1 && (!Array.isArray(items) || items.length === 0)) {
         displayPageSection({ showEmpty: true, showGrid: false });
+        setVis(loadMoreContainer, false); // Sembunyikan tombol jika kosong
         noMore = true;
         return;
       }
@@ -186,22 +203,40 @@
       appendNews(items);
       displayPageSection({ showGrid: true });
       noMore = !has_next;
-      if (!has_next && sentinel) observer.unobserve(sentinel);
+      setVis(loadMoreContainer, !noMore); // Tampilkan tombol jika !noMore
+      // if (!has_next && sentinel) observer.unobserve(sentinel); // <-- DIHAPUS
     } catch (e) {
       if (p === 1) displayPageSection({ showError: true, showGrid: false });
+      setVis(loadMoreContainer, false); // Sembunyikan tombol jika error
       console.error(e);
     } finally {
       isLoading = false;
+      // Reset state tombol
+      if (loadMoreBtn) {
+        loadMoreBtn.disabled = false;
+        loadMoreBtn.textContent = 'Load More';
+      }
     }
   }
 
-  const observer = new IntersectionObserver((entries) => {
-    const entry = entries[0];
-    if (entry.isIntersecting && !isLoading && !noMore) {
-      page += 1;
-      fetchPage(page);
-    }
-  }, { rootMargin: '400px' });
+  // LOGIKA OBSERVER DIHAPUS
+  // const observer = new IntersectionObserver((entries) => {
+  //   const entry = entries[0];
+  //   if (entry.isIntersecting && !isLoading && !noMore) {
+  //     page += 1;
+  //     fetchPage(page);
+  //   }
+  // }, { rootMargin: '400px' });
+
+  // EVENT LISTENER BARU UNTUK TOMBOL LOAD MORE
+  if (loadMoreBtn) {
+    loadMoreBtn.addEventListener('click', () => {
+      if (!isLoading && !noMore) {
+        page += 1;
+        fetchPage(page);
+      }
+    });
+  }
 
   if (openBtn && modal && form) {
     openBtn.addEventListener('click', openModal);
@@ -226,8 +261,9 @@
         closeModal();
         page = 1; noMore = false;
         newsGridContainer.innerHTML = '';
-        observer.observe(sentinel);
-        await fetchPage(page);
+        setVis(loadMoreContainer, false); // Sembunyikan tombol sebelum fetch
+        // observer.observe(sentinel); // <-- DIHAPUS
+        await fetchPage(page); // Fetch ulang, tombol akan muncul jika perlu
       } catch (err) {
         errText.textContent = err.message || 'Failed to create news';
         errText.classList.remove('hidden');
@@ -250,9 +286,18 @@
       });
       if (!res.ok) throw new Error('HTTP ' + res.status);
       btn.closest('article')?.remove();
-      if (!newsGridContainer.children.length && !noMore && !isLoading) {
+      
+      // Cek jika grid kosong SETELAH delete, dan masih ada data di server
+      if (newsGridContainer.children.length === 0 && !noMore && !isLoading) {
         await fetchPage(page);
       }
+      
+      // Cek jika grid kosong dan TIDAK ada lagi data di server
+      if (newsGridContainer.children.length === 0 && noMore) {
+        displayPageSection({ showEmpty: true, showGrid: false });
+        setVis(loadMoreContainer, false);
+      }
+
     } catch {
       btn.disabled = false;
       alert('Delete failed');
@@ -261,7 +306,7 @@
 
   document.addEventListener('DOMContentLoaded', async () => {
     await fetchPage(page);
-    if (sentinel) observer.observe(sentinel);
+    // if (sentinel) observer.observe(sentinel); // <-- DIHAPUS
   });
 </script>
 
