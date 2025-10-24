@@ -26,15 +26,73 @@
   </div>
 </section>
 
-<div id="loading" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-3">
+  <div class="flex items-center gap-3" id="news-filters-bar">
+
+    <div class="relative inline-block" id="month-wrap">
+      <button id="month-btn"
+              class="inline-flex items-start justify-between gap-2 px-4 py-2.5 border-b-2 border-red-700 bg-white w-[200px]">
+        <span id="month-label" class="flex-1 text-left whitespace-normal break-words leading-snug">
+          Filter bulan: Semua
+        </span>
+        <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.27a.75.75 0 01-.02-1.06z"/>
+        </svg>
+      </button>
+      <div id="month-menu"
+           class="hidden absolute z-10 mt-2 w-[200px] rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+        <ul class="py-1">
+          <li><a data-month=""  href="#" class="block px-4 py-2 hover:bg-slate-50">Semua</a></li>
+          <li><a data-month="1" href="#" class="block px-4 py-2 hover:bg-slate-50">Jan</a></li>
+          <li><a data-month="2" href="#" class="block px-4 py-2 hover:bg-slate-50">Feb</a></li>
+          <li><a data-month="3" href="#" class="block px-4 py-2 hover:bg-slate-50">Mar</a></li>
+          <li><a data-month="4" href="#" class="block px-4 py-2 hover:bg-slate-50">Apr</a></li>
+          <li><a data-month="5" href="#" class="block px-4 py-2 hover:bg-slate-50">Mei</a></li>
+          <li><a data-month="6" href="#" class="block px-4 py-2 hover:bg-slate-50">Jun</a></li>
+          <li><a data-month="7" href="#" class="block px-4 py-2 hover:bg-slate-50">Jul</a></li>
+          <li><a data-month="8" href="#" class="block px-4 py-2 hover:bg-slate-50">Agu</a></li>
+          <li><a data-month="9" href="#" class="block px-4 py-2 hover:bg-slate-50">Sep</a></li>
+          <li><a data-month="10" href="#" class="block px-4 py-2 hover:bg-slate-50">Okt</a></li>
+          <li><a data-month="11" href="#" class="block px-4 py-2 hover:bg-slate-50">Nov</a></li>
+          <li><a data-month="12" href="#" class="block px-4 py-2 hover:bg-slate-50">Des</a></li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="relative inline-block" id="sort-wrap">
+      <button id="sort-btn"
+              class="inline-flex items-start justify-between gap-2 px-4 py-2.5 border-b-2 border-red-700 bg-white w-64">
+        <span id="sort-label" class="flex-1 text-left whitespace-normal break-words leading-snug">
+          Urutkan: Terbaru
+        </span>
+        <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+          <path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.27a.75.75 0 01-.02-1.06z"/>
+        </svg>
+      </button>
+      <div id="sort-menu"
+           class="hidden absolute z-10 mt-2 w-64 rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+        <ul class="py-1">
+          <li><a data-sort="desc" href="#" class="block px-4 py-2 hover:bg-slate-50">Terbaru</a></li>
+          <li><a data-sort="asc"  href="#" class="block px-4 py-2 hover:bg-slate-50">Terlama</a></li>
+        </ul>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+
+<!-- Loading/Error/Empty UNDER the filters -->
+<div id="loading" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
   <p class="text-gray-600">Loading news…</p>
 </div>
-<div id="error" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+<div id="error" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
   <p class="text-red-600">Failed to load news.</p>
 </div>
-<div id="empty" class="bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
+<div id="empty" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 bg-white rounded-lg border border-gray-200 p-12 text-center hidden">
   <p class="text-gray-600">No news yet.</p>
 </div>
+
 
 <div id="grid" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 gap-6">
 
@@ -173,62 +231,116 @@
     items.forEach(item => newsGridContainer.appendChild(buildNewsCardElement(item)));
   }
 
-  async function fetchPage(p) {
-    isLoading = true;
-    // Set tombol ke state loading
-    if (loadMoreBtn) {
-      loadMoreBtn.disabled = true;
-      loadMoreBtn.textContent = 'Loading...';
-    }
+  // --- Merch-style dropdown controls ---
+  let filterMonth = "";     // "" = all
+  let sortOrder   = "desc"; // "desc" (Terbaru) | "asc" (Terlama)
 
-    const qs = new URLSearchParams({ page: String(p), page_size: String(PAGE_SIZE) }).toString();
-    try {
-      if (p === 1) {
-        displayPageSection({ showLoading: true, showGrid: false });
-        setVis(loadMoreContainer, false); // Sembunyikan tombol saat load awal
-      }
-      const res = await fetch(`${NEWS_API_ENDPOINT}?${qs}`, {
-        headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
-      });
-      if (!res.ok) throw new Error('HTTP ' + res.status);
-      const { items, has_next, total } = await res.json();
+  const monthWrap  = document.getElementById('month-wrap');
+  const sortWrap   = document.getElementById('sort-wrap');
+  const monthBtn   = document.getElementById('month-btn');
+  const sortBtn    = document.getElementById('sort-btn');
+  const monthMenu  = document.getElementById('month-menu');
+  const sortMenu   = document.getElementById('sort-menu');
+  const monthLabel = document.getElementById('month-label');
+  const sortLabel  = document.getElementById('sort-label');
 
-      if (p === 1 && (!Array.isArray(items) || items.length === 0)) {
-        displayPageSection({ showEmpty: true, showGrid: false });
-        setVis(loadMoreContainer, false); // Sembunyikan tombol jika kosong
-        noMore = true;
-        return;
-      }
-
-      appendNews(items);
-      displayPageSection({ showGrid: true });
-      noMore = !has_next;
-      setVis(loadMoreContainer, !noMore); // Tampilkan tombol jika !noMore
-      // if (!has_next && sentinel) observer.unobserve(sentinel); // <-- DIHAPUS
-    } catch (e) {
-      if (p === 1) displayPageSection({ showError: true, showGrid: false });
-      setVis(loadMoreContainer, false); // Sembunyikan tombol jika error
-      console.error(e);
-    } finally {
-      isLoading = false;
-      // Reset state tombol
-      if (loadMoreBtn) {
-        loadMoreBtn.disabled = false;
-        loadMoreBtn.textContent = 'Load More';
-      }
-    }
+  function highlightActive(menuEl, predicate){
+    menuEl.querySelectorAll('a').forEach(a=>{
+      const active = predicate(a);
+      a.classList.toggle('bg-[#e11d2a]/10', active);
+      a.classList.toggle('font-semibold', active);
+    });
   }
 
-  // LOGIKA OBSERVER DIHAPUS
-  // const observer = new IntersectionObserver((entries) => {
-  //   const entry = entries[0];
-  //   if (entry.isIntersecting && !isLoading && !noMore) {
-  //     page += 1;
-  //     fetchPage(page);
-  //   }
-  // }, { rootMargin: '400px' });
+  function refreshFilterLabels(){
+    const monthNice = {
+      "": "Semua","1":"Jan","2":"Feb","3":"Mar","4":"Apr","5":"Mei","6":"Jun",
+      "7":"Jul","8":"Agu","9":"Sep","10":"Okt","11":"Nov","12":"Des"
+    };
+    monthLabel.textContent = `Filter bulan: ${monthNice[String(filterMonth)] || 'Semua'}`;
+    sortLabel.textContent  = `Urutkan: ${sortOrder === 'asc' ? 'Terlama' : 'Terbaru'}`;
 
-  // EVENT LISTENER BARU UNTUK TOMBOL LOAD MORE
+    highlightActive(monthMenu, a => (a.dataset.month ?? "") === String(filterMonth));
+    highlightActive(sortMenu,  a => (a.dataset.sort  ?? "desc") === String(sortOrder));
+  }
+
+  monthBtn?.addEventListener('click', ()=> monthMenu.classList.toggle('hidden'));
+  sortBtn?.addEventListener('click',  ()=>  sortMenu.classList.toggle('hidden'));
+  document.addEventListener('click', (e)=>{
+    if(!monthWrap.contains(e.target)) monthMenu.classList.add('hidden');
+    if(!sortWrap.contains(e.target))  sortMenu.classList.add('hidden');
+  });
+  document.addEventListener('keydown', (e)=>{
+    if(e.key === 'Escape'){ monthMenu.classList.add('hidden'); sortMenu.classList.add('hidden'); }
+  });
+
+  monthMenu?.addEventListener('click', async (e)=>{
+    const a = e.target.closest('a[data-month]');
+    if(!a) return;
+    e.preventDefault();
+    filterMonth = a.dataset.month || "";
+    monthMenu.classList.add('hidden');
+    refreshFilterLabels();
+    // reload
+    page = 1; noMore = false; newsGridContainer.innerHTML = '';
+    await fetchPage(page);
+  });
+
+  sortMenu?.addEventListener('click', async (e)=>{
+    const a = e.target.closest('a[data-sort]');
+    if(!a) return;
+    e.preventDefault();
+    sortOrder = a.dataset.sort || "desc";
+    sortMenu.classList.add('hidden');
+    refreshFilterLabels();
+    page = 1; noMore = false; newsGridContainer.innerHTML = '';
+    await fetchPage(page);
+  });
+
+  refreshFilterLabels();
+
+
+async function fetchPage(p) {
+  isLoading = true;
+  if (loadMoreBtn) { loadMoreBtn.disabled = true; loadMoreBtn.textContent = 'Loading...'; }
+
+  const params = new URLSearchParams({
+    page: String(p),
+    page_size: String(PAGE_SIZE),
+    sort: sortOrder,              // <--- NEW
+  });
+  if (filterMonth) params.set('month', filterMonth);
+
+  try {
+    if (p === 1) { displayPageSection({ showLoading:true, showGrid:false }); setVis(loadMoreContainer, false); }
+    const res = await fetch(`${NEWS_API_ENDPOINT}?${params.toString()}`, {
+      headers: { Accept: 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
+    });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
+    const { items, has_next } = await res.json();
+
+    if (p === 1 && (!Array.isArray(items) || items.length === 0)) {
+      displayPageSection({ showEmpty:true, showGrid:false });
+      setVis(loadMoreContainer, false);
+      noMore = true;
+      return;
+    }
+
+    appendNews(items);
+    displayPageSection({ showGrid:true });
+    noMore = !has_next;
+    setVis(loadMoreContainer, !noMore);
+  } catch (e) {
+    if (p === 1) displayPageSection({ showError:true, showGrid:false });
+    setVis(loadMoreContainer, false);
+    console.error(e);
+  } finally {
+    isLoading = false;
+    if (loadMoreBtn) { loadMoreBtn.disabled = false; loadMoreBtn.textContent = 'Load More'; }
+  }
+}
+
+
   if (loadMoreBtn) {
     loadMoreBtn.addEventListener('click', () => {
       if (!isLoading && !noMore) {
@@ -261,9 +373,8 @@
         closeModal();
         page = 1; noMore = false;
         newsGridContainer.innerHTML = '';
-        setVis(loadMoreContainer, false); // Sembunyikan tombol sebelum fetch
-        // observer.observe(sentinel); // <-- DIHAPUS
-        await fetchPage(page); // Fetch ulang, tombol akan muncul jika perlu
+        setVis(loadMoreContainer, false);
+        await fetchPage(page);
       } catch (err) {
         errText.textContent = err.message || 'Failed to create news';
         errText.classList.remove('hidden');
@@ -287,12 +398,10 @@
       if (!res.ok) throw new Error('HTTP ' + res.status);
       btn.closest('article')?.remove();
       
-      // Cek jika grid kosong SETELAH delete, dan masih ada data di server
       if (newsGridContainer.children.length === 0 && !noMore && !isLoading) {
         await fetchPage(page);
       }
       
-      // Cek jika grid kosong dan TIDAK ada lagi data di server
       if (newsGridContainer.children.length === 0 && noMore) {
         displayPageSection({ showEmpty: true, showGrid: false });
         setVis(loadMoreContainer, false);
