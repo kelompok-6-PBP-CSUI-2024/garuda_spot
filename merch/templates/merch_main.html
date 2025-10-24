@@ -6,12 +6,11 @@
 <div class="bg-white w-full min-h-screen mt-14 mb-16">
   <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-6">
 
-    <!-- Header -->
     <div>
-      <h1 class="text-3xl font-bold text-gray-900 mb-2">
-        Latest Garuda Spot Merchandise
+      <h1 class="text-6xl font-bold text-center text-gray-900 mb-2 py-12">
+        GarudaSpot Merchandise
       </h1>
-      <div class="flex gap-3">
+      <div class="flex gap-3 my-2">
         {% if user.is_authenticated and user.is_admin %}
         <button type="button"
                 onclick="MerchModal.show()"
@@ -23,13 +22,11 @@
     </div>
 
     {% with filter_val=request.GET.filter|default:'all' sort_val=request.GET.sort|default:'recent' %}
-    <!-- Filters bar -->
     <div class="flex items-center gap-3" id="filters-bar">
 
-      <!-- Category -->
-        <div class="relative inline-block" id="cat-wrap">
+      <div class="relative inline-block" id="cat-wrap">
           <button id="cat-btn"
-                  class="inline-flex items-start justify-between gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900 hover:bg-slate-50 w-[200px]">
+                  class="inline-flex items-start justify-between gap-2 px-4 py-2.5 border-b-2 border-red-700 bg-white  w-[200px]">
             <span id="cat-label" class="flex-1 text-left whitespace-normal break-words leading-snug">Filters</span>
             <svg class="w-4 h-4 shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor"><path d="M5.23 7.21a.75.75 0 011.06.02L10 10.94l3.71-3.71a.75.75 0 111.06 1.06l-4.24 4.24a.75.75 0 01-1.06 0L5.25 8.27a.75.75 0 01-.02-1.06z"/></svg>
           </button>
@@ -48,10 +45,9 @@
         </div>
       </div>
 
-      <!-- Sort -->
-        <div class="relative inline-block" id="sort-wrap">
+      <div class="relative inline-block" id="sort-wrap">
           <button id="sort-btn"
-                  class="inline-flex items-start justify-between gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900 hover:bg-slate-50 w-64">
+                  class="inline-flex items-start justify-between gap-2 px-4 py-2.5 border-b-2 border-red-700 bg-white w-64">
             <span id="sort-label" class="flex-1 text-left whitespace-normal break-words leading-snug">
               Sort by: Recently Added
             </span>
@@ -72,73 +68,89 @@
     </div>
     {% endwith %}
 
-    <!-- Grid daftar merch -->
-    <div id="merch-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-4">
-      {% for m in list_merch %}
-      <article id="merch-card-{{ m.id }}" class="rounded-xl border border-gray-200 bg-white overflow-hidden">
-        <div class="aspect-[4/3] bg-gray-100">
-          {% if m.thumbnail %}
-            <img src="{{ m.thumbnail }}" alt="{{ m.name }}" class="w-full h-full object-cover">
-          {% endif %}
-        </div>
-        <div class="p-4">
-          <h3 class="font-semibold text-gray-900 merch-name">{{ m.name }}</h3>
-          <p class="text-sm text-gray-500 merch-meta">
-            <span class="merch-vendor">{{ m.vendor }}</span> •
-            <span class="merch-category">{{ m.category|capfirst }}</span>
-          </p>
-          <p class="mt-2 font-bold text-gray-900">Rp <span class="merch-price">{{ m.price|intcomma }}</span></p>
+    {% load humanize %}
 
-          <div class="mt-3 flex gap-2">
-            <a href="{% url 'merch:detail' m.id %}" class="px-3 py-1 rounded border border-gray-300 text-sm">Detail</a>
-
-            {% if user.is_authenticated and user.is_admin %}
-            <!-- EDIT -->
-            <button
-              type="button"
-              class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
-              data-action="edit"
-              data-id="{{ m.id }}"
-              data-url="{% url 'merch:update_merch' m.id %}"
-              data-name="{{ m.name|escape }}"
-              data-vendor="{{ m.vendor|escape }}"
-              data-price="{{ m.price }}"
-              data-stock="{{ m.stock }}"
-              data-thumbnail="{{ m.thumbnail|default:''|escape }}"
-              data-category="{{ m.category }}"
-              data-link="{{ m.link|default:''|escape }}"
-              data-description="{{ m.description|default:''|escape }}">
-              Edit
-            </button>
-
-            <!-- DELETE -->
-            <button
-              type="button"
-              class="px-3 py-1 rounded bg-red-600 text-white text-sm hover:bg-red-700"
-              data-action="delete"
-              data-url="{% url 'merch:delete_merch' m.id %}">
-              Delete
-            </button>
-            {% endif %}
-          </div>
-        </div>
-      </article>
-      {% empty %}
-      <div class="col-span-full text-center text-gray-500 py-10">Belum ada merchandise.</div>
-      {% endfor %}
+<div id="merch-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mt-4">
+  {% for m in list_merch %}
+  <article id="merch-card-{{ m.id }}" 
+           class="bg-white rounded-sm cursor-pointer border border-red-100 overflow-hidden group" 
+           data-url="{% url 'merch:detail' m.id %}"
+           > <div class="aspect-[4/3] relative overflow-hidden">
+      {% if m.thumbnail %}
+        <img src="{{ m.thumbnail }}" 
+             alt="{{ m.name }}" 
+             class="w-full h-full object-cover transition-transform duration-300 ease-out transform group-hover:scale-110">
+      {% else %}
+        <div class="w-full h-full bg-gray-200"></div>
+      {% endif %}
     </div>
 
-    <!-- Loading -->
-    <div id="merch-loading" class="hidden">
-      <div class="border border-gray-200 rounded-2xl p-10 text-center">
-        <div class="mx-auto inline-block w-8 h-8 border-4 border-gray-300 border-t-[#e11d2a] rounded-full animate-spin"></div>
-        <p class="mt-3 text-gray-500">Loading...</p>
+    <div class="p-5">
+      <h3 class="text-lg font-semibold text-gray-900 mb-3 line-clamp-2 leading-tight">
+        <a href="{% url 'merch:detail' m.id %}" 
+           class="hover:text-red-700 transition-colors"
+           > {{ m.name }}
+        </a>
+      </h3>
+
+      <p class="text-gray-900 text-xl font-semibold mb-2">
+        Rp {{ m.price|intcomma:"." }}
+      </p>
+
+      <div class="flex items-center justify-between text-sm text-gray-600 mb-2">
+        <p class="font-semibold">
+          {{ m.vendor }}
+        </p>
+        <p class="font-light">
+          {{ m.category|capfirst }}
+        </p>
+      </div>
+
+      <div class="flex justify-end items-center gap-3 mt-4 border-t border-gray-100 pt-3">
+        {% if user.is_authenticated and user.is_admin %}
+        <button
+          type="button"
+          class="text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors"
+          data-action="edit"
+          data-id="{{ m.id }}"
+          data-url="{% url 'merch:update_merch' m.id %}"
+          data-name="{{ m.name|escape }}"
+          data-vendor="{{ m.vendor|escape }}"
+          data-price="{{ m.price }}"
+          data-stock="{{ m.stock }}"
+          data-thumbnail="{{ m.thumbnail|default:''|escape }}"
+          data-category="{{ m.category }}"
+          data-link="{{ m.link|default:''|escape }}"
+          data-description="{{ m.description|default:''|escape }}">
+          Edit
+        </button>
+
+        <button
+          type="button"
+          class="text-red-600 hover:text-red-800 text-sm font-medium transition-colors z-20"
+          data-action="delete"
+          data-url="{% url 'merch:delete_merch' m.id %}">
+          Delete
+        </button>
+        {% else %}
+        <div class="h-5"></div>
+        {% endif %}
       </div>
     </div>
+  </article>
 
+  {% empty %}
+  <div class="col-span-full text-center text-gray-500 py-10">Belum ada merchandise.</div>
+  {% endfor %}
+</div>
+
+<div id="merch-loading" class="hidden">
+  <div class="border border-gray-200 rounded-2xl p-10 text-center">
+    <div class="mx-auto inline-block w-8 h-8 border-4 border-gray-300 border-t-[#e11d2a] rounded-full animate-spin"></div>
+    <p class="mt-3 text-gray-500">Loading...</p>
   </div>
-  
-  <!-- Create Merch Modal -->
+</div>
+
   <div id="createModal" class="hidden fixed inset-0 z-50 w-full h-full flex items-center justify-center">
     <div class="absolute inset-0 bg-black/60" onclick="MerchModal.hide()"></div>
     <div class="relative bg-white w-[92%] max-w-xl rounded-2xl border border-gray-200 shadow-xl p-6">
@@ -182,7 +194,6 @@
     </div>
   </div>
 
-  <!-- Edit Merch Modal -->
   <div id="editModal" class="hidden fixed inset-0 z-50 w-full h-full flex items-center justify-center">
     <div class="absolute inset-0 bg-black/60" onclick="EditModal.hide()"></div>
     <div class="relative bg-white w-[92%] max-w-xl rounded-2xl border border-gray-200 shadow-xl p-6">
@@ -229,7 +240,6 @@
 
 </div>
 
-<!-- AJAX + Dropdown + Create/Edit/Delete + Sort -->
 <script>
 'use strict';
 
@@ -381,7 +391,23 @@ const EditModal = (function(){
       const data = await postForm(current.url, new FormData(form));
       // Update inline card if still visible on page
       const card=document.getElementById('merch-card-'+data.id);
-      if(card){ card.querySelector('.merch-name').textContent=data.name; card.querySelector('.merch-vendor').textContent=data.vendor; card.querySelector('.merch-category').textContent=(data.category||'').replace(/^./,c=>c.toUpperCase()); card.querySelector('.merch-price').textContent=formatRupiah(data.price); const img=card.querySelector('img'); if(img && data.thumbnail) img.src=data.thumbnail; }
+      if(card){ 
+          // Perlu memastikan selector Anda sesuai dengan struktur baru:
+          const nameEl = card.querySelector('h3 a'); 
+          if(nameEl) nameEl.textContent = data.name;
+          
+          const vendorEl = card.querySelector('.text-sm.text-gray-600 p:first-child');
+          if(vendorEl) vendorEl.textContent = data.vendor;
+          
+          const categoryEl = card.querySelector('.text-sm.text-gray-600 p:last-child');
+          if(categoryEl) categoryEl.textContent = (data.category||'').replace(/^./,c=>c.toUpperCase());
+          
+          const priceEl = card.querySelector('.text-xl.font-semibold');
+          if(priceEl) priceEl.textContent = 'Rp ' + formatRupiah(data.price);
+          
+          const img=card.querySelector('img'); 
+          if(img && data.thumbnail) img.src=data.thumbnail; 
+      }
       hide();
     }catch(er){ err.textContent=String(er.message||er).slice(0,300); err.classList.remove('hidden'); }
     finally{ btn.disabled=false; btn.textContent='Save Changes'; }
@@ -389,26 +415,44 @@ const EditModal = (function(){
   return { show, hide };
 })();
 
-/* ===== Edit/Delete ===== */
+/* ===== Edit/Delete/Navigasi Kartu (KONSOLIDASI) ===== */
 grid?.addEventListener('click', async (e)=>{
   const delBtn=e.target.closest('[data-action="delete"]');
   const editBtn=e.target.closest('[data-action="edit"]');
+  const merchCard = e.target.closest('article[data-url]'); // Cari elemen kartu
 
+  // 1. Tangani Delete (Prioritas Tertinggi)
   if(delBtn){
     e.preventDefault();
+    e.stopPropagation(); // Pastikan tidak ada aksi lain yang terpicu
     if(!confirm('Delete this merch?')) return;
-    try{ await postForm(delBtn.dataset.url, new FormData()); delBtn.closest('article')?.remove(); }
-    catch(er){ console.error(er); alert(/403/.test(String(er)) ? 'Forbidden: hanya admin.' : 'Gagal menghapus item.'); }
-    return;
+    try{ 
+      await postForm(delBtn.dataset.url, new FormData()); 
+      delBtn.closest('article')?.remove(); 
+    }
+    catch(er){ 
+      console.error(er); 
+      alert(/403/.test(String(er)) ? 'Forbidden: hanya admin.' : 'Gagal menghapus item.'); 
+    }
+    return; // Selesai
   }
 
+  // 2. Tangani Edit
   if(editBtn){
     e.preventDefault();
+    e.stopPropagation(); // Pastikan tidak ada aksi lain yang terpicu
     EditModal.show({
       id: editBtn.dataset.id, url: editBtn.dataset.url, name: editBtn.dataset.name, vendor: editBtn.dataset.vendor,
       price: editBtn.dataset.price, stock: editBtn.dataset.stock, thumbnail: editBtn.dataset.thumbnail,
       category: editBtn.dataset.category, link: editBtn.dataset.link, description: editBtn.dataset.description
     });
+    return; // Selesai
+  }
+  
+  // 3. Tangani Navigasi Kartu (Jika yang diklik BUKAN tombol admin)
+  // Periksa apakah yang diklik berada di dalam kartu dan bukan link lain di dalamnya
+  if(merchCard && !e.target.closest('a[href]')){
+    window.location.href = merchCard.dataset.url;
   }
 });
 </script>

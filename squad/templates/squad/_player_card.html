@@ -9,11 +9,11 @@
   <!-- KARTU + HIGHLIGHT MERAH -->
   <div class="relative rounded-2xl">
     <!-- highlight merah di belakang foto -->
-  <div class="absolute inset-3 rounded-2xl bg-gradient-to-b from-red-500/15 to-red-600/30
+  <div class="absolute inset-0 rounded-lg bg-gradient-to-b from-red-500/15 to-red-800/30
               opacity-100 transition-opacity duration-300 group-hover:opacity-0"></div>
     
     <!-- frame foto -->
-    <div class="relative aspect-[3/4] rounded-2xl overflow-hidden">
+    <div class="relative aspect-[3/4] rounded-lg overflow-hidden">
       {% if p.photo %}
         <img src="{{ p.photo.url }}" alt="{{ p.name }}"
              class="absolute inset-0 w-full h-full object-cover object-top
@@ -30,18 +30,25 @@
 
       <!-- OVERLAY MERAH: AGE / CLUB / POSITION (muncul saat hover) -->
       <div class="absolute inset-0 opacity-0 group-hover:opacity-100 transition
-                  bg-red-900/70 text-white backdrop-blur-[1px]">
-        <div class="h-full flex items-center justify-center px-4">
-          <div class="grid grid-row-3 gap-12 text-center w-full max-w-sm">
-            <div class="px-3">
-              <div class="uppercase text-[10px] tracking-widest opacity-80">Age</div>
-              <div class="text-5xl font-black leading-none">{{ p.age|default:"-" }}</div>
+                  bg-red-900/70 text-white backdrop-blur-5xl">
+        <div class="h-full flex items-center px-4">
+
+          <div class="flex flex-col gap-8 text-center w-full max-w-sm">
+
+            <div class="flex flex-col gap-2">
+              <div class="text-md font-light tracking-widest">Age</div>
+              <div class="text-5xl font-black">{{ p.age|default:"-" }}</div>
             </div>
-              <div class="uppercase text-[10px] tracking-widest opacity-80">Current Club</div>
-              <div class="mt-1 text-base font-extrabold whitespace-nowrap">{{ p.club|default:"-" }}</div>
-            <div class="px-3">
-              <div class="uppercase text-[10px] tracking-widest opacity-80">Position</div>
-              <div class="mt-1 text-base font-extrabold">
+
+            <div class="flex flex-col gap-2">
+              <div class="text-md font-light tracking-widest">Current Club</div>
+              <div class="text-2xl font-bold">{{ p.club|default:"-" }}</div>
+            </div>
+
+            <div class="flex flex-col gap-2">
+              <div class="text-md font-light tracking-widest">Position</div>
+
+              <div class="text-2xl font-bold">
                 {% if p.positions_display %}{{ p.positions_display }}
                 {% elif p.position1 %}{{ p.position1 }}
                 {% else %}-{% endif %}
@@ -52,14 +59,17 @@
       </div>
     </div>
   </div>
+      
 
-<footer class="mt-4 text-center leading-tight px-4 relative z-30">
+
+
+<footer class="mt-4 text-center leading-tight px-4 relative z-20">
   <div class="text-red-700 font-semibold uppercase text-xs tracking-wider">{{ p.fname }}</div>
   <div class="text-red-700 text-3xl font-black tracking-wide">{{ p.lname }}</div>
 
   <div class="-mx-4">
     <span
-      class="mt-2 block h-0.5 bg-red-600 rounded-full w-full mx-auto
+      class="mt-2 block h-0.5 bg-red-800 rounded-full w-full mx-auto
              origin-center transition-transform duration-300 ease-out
              scale-x-[.12] group-hover:scale-x-100">
     </span>
@@ -74,7 +84,7 @@
       Edit
     </button>
     <button type="button"
-            class="px-2 py-1 rounded border border-red-500 text-red-600 text-sm"
+            class="px-2 py-1 rounded border border-red-500 text-red-800 text-sm"
             data-url="{% url 'squad:player_delete' p.id %}"
             onclick="deletePlayer(this)">
       Delete
