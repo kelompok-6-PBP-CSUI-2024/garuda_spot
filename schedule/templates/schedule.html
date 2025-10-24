@@ -40,12 +40,12 @@
 
     <div id="empty" class="bg-white py-12 text-center hidden">
         <h3 class="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
-
     </div>
 
 </div>
 
 {% include 'create_match_modal.html' %}
+{% include 'edit_match_modal.html' %} 
 
 <div id="toast-component" class="fixed bottom-5 right-5 w-full max-w-xs p-4 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-64" style="z-index: 100;">
     <h3 id="toast-title" class="font-semibold"></h3>
@@ -55,9 +55,21 @@
 <script src="{% static 'js/toast.js' %}"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
 <script>
-    // --- 1. Konfigurasi & Variabel Global ---
+// --- 1. Konfigurasi & Variabel Global ---
     const MATCH_API_ENDPOINT = "{% url 'schedule:show_json' %}";
     const ADD_MATCH_ENDPOINT = "{% url 'schedule:add_match_ajax' %}";
+    
+    // KOREKSI UTAMA: Gunakan UUID placeholder valid langsung di URL tag
+    const UUID_PLACEHOLDER_FOR_URL = '00000000-0000-0000-0000-000000000000';
+    
+    // Hasilnya: "/schedule/update-ajax/00000000-0000-0000-0000-000000000000/"
+    // Kita passing string UUID valid, BUKAN variabel JS
+    const UPDATE_MATCH_FULL_URL = "{% url 'schedule:update_match_ajax' match_id='00000000-0000-0000-0000-000000000000' %}";
+    const DELETE_MATCH_FULL_URL = "{% url 'schedule:delete_match_ajax' match_id='00000000-0000-0000-0000-000000000000' %}";
+
+    // Base URL yang akan digunakan di JS, hasilnya: "/schedule/update-ajax/"
+    const UPDATE_MATCH_BASE_URL = UPDATE_MATCH_FULL_URL.replace(UUID_PLACEHOLDER_FOR_URL, '').replace(/\/$/, "");
+    const DELETE_MATCH_BASE_URL = DELETE_MATCH_FULL_URL.replace(UUID_PLACEHOLDER_FOR_URL, '').replace(/\/$/, "");
     let allMatchesData = [];
 
     // --- 2. Elemen DOM ---
@@ -67,6 +79,8 @@
     const emptyStateDisplay = document.getElementById('empty');
     const matchesGridContainer = document.getElementById('grid');
     const categoryFilterSelect = document.getElementById('categoryFilterForm').querySelector('select');
+    
+    // Elemen Modal Create
     const modal = document.getElementById('fixture-modal');
     const modalContent = document.getElementById('fixture-modal-content');
     const openBtn = document.getElementById('open-fixture-modal-btn');
@@ -77,16 +91,25 @@
     const submitBtn = document.getElementById('submit-fixture-btn');
     const formError = document.getElementById('form-error');
 
+    // Elemen Modal Edit
+    const editModal = document.getElementById('edit-fixture-modal');
+    const editModalContent = document.getElementById('edit-fixture-modal-content');
+    const closeEditBtn = document.getElementById('close-edit-modal-btn');
+    const cancelEditBtn = document.getElementById('cancel-edit-btn');
+    const editForm = document.getElementById('edit-match-form');
+    const editSubmitBtn = document.getElementById('submit-edit-btn');
+    const editFormError = document.getElementById('edit-form-error');
+
+
     // --- 3. Utility Functions ---
     function setVis(el, show) { if (el) el.classList.toggle('hidden', !show); }
     function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
         setVis(loadingSpinner, showLoading);
         setVis(errorDisplay, showError);
         setVis(emptyStateDisplay, showEmpty);
-        setVis(matchesGridContainer, showGrid); // Use toggle based on showGrid
-        // Ensure container is displayed correctly when grid is shown
+        setVis(matchesGridContainer, showGrid);
         if (matchesGridContainer) {
-            matchesGridContainer.style.display = showGrid ? '' : 'none'; // Use display none/block
+            matchesGridContainer.style.display = showGrid ? '' : 'none';
         }
     }
     function getCookie(name) {
@@ -94,7 +117,7 @@
         return v ? decodeURIComponent(v.split('=')[1]) : null;
     }
 
-    // --- 4. Render Card Match ---
+    // --- 4. Render Card Match (Diperbarui untuk tombol Admin) ---
     function buildMatchCardElement(match) {
         const anchor = document.createElement('a');
         const linkDetail = `{% url 'schedule:show_match' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', match.id);
@@ -118,11 +141,28 @@
         const categoryImgHtml = (categoryImg) ? `<img src="${categoryImg}" class="w-8 mb-2 inline-block ml-2" alt="">` : '';
         const scoreHtml = (match.home_score !== null && match.away_score !== null) ? `${match.home_score} - ${match.away_score}` : 'vs';
 
+        // Admin Controls
+        let adminControlsHtml = '';
+        {% if request.user.is_authenticated and request.user.is_admin %}
+
+        adminControlsHtml = `
+            <div class="flex space-x-2 mt-2" onclick="event.preventDefault(); event.stopPropagation();">
+                <button type="button" data-match-id="${match.id}" class="edit-match-btn text-xs font-semibold border border-red-600 px-2 py-1 hover:bg-gray-200">Edit</button>
+                <button type="button" data-match-id="${match.id}" data-match-teams="${homeTeam} vs ${awayTeam}" class="delete-match-btn text-xs text-red-600 font-semibold border border-red-600 px-2 py-1 hover:bg-gray-200">Delete</button>
+            </div>
+        `;
+        {% endif %}
+
         // Build HTML
         anchor.innerHTML = `
             <div class="flex flex-col bg-white border-b border-t border-red-600 items-center hover:bg-white hover:shadow-lg hover:-translate-y-1 py-4 px-2 transition-all duration-300 ease-in-out">
                 <div class="flex flex-row justify-between items-start gap-3 w-full max-w-12xl px-4">
-                    <div> <p class="text-md">${formattedDate}</p> <p class="font-light text-md">${location}</p> </div>
+                    <div> 
+                        <p class="text-md">${formattedDate}</p> 
+                        <p class="font-light text-md">${location}</p> 
+                        
+                    </div>
+                    
                     <div class="flex flex-row justify-center items-start gap-1"> <span class="font text-red-700 text-md block">${category}</span> ${categoryImgHtml} </div>
                 </div>
                 <div class="relative flex items-center justify-between w-full max-w-4xl my-2 px-4 py-4">
@@ -136,13 +176,14 @@
                     <span class="font-semibold uppercase text-xl text-left truncate">${awayTeam}</span>
                   </div>
                 </div>
+                ${adminControlsHtml} 
             </div>`;
         return anchor;
     }
 
     function renderAllMatches(matches) {
         if (!matchesGridContainer) return;
-        matchesGridContainer.innerHTML = ''; // Clear previous content
+        matchesGridContainer.innerHTML = '';
         const monthGroups = {};
         matches.forEach(match => {
             const date = new Date(match.match_date);
@@ -150,7 +191,7 @@
             if (!monthGroups[monthKey]) { monthGroups[monthKey] = { month_date: new Date(date.getFullYear(), date.getMonth(), 1), matches: [] }; }
             monthGroups[monthKey].matches.push(match);
         });
-        const sortedGroups = Object.values(monthGroups).sort((a, b) => b.month_date - a.month_date); // Newest month first
+        const sortedGroups = Object.values(monthGroups).sort((a, b) => b.month_date - a.month_date); 
         sortedGroups.forEach(group => {
             const groupContainer = document.createElement('div');
             groupContainer.className = 'my-4 mx-4 bg-white py-4 px-4';
@@ -160,13 +201,15 @@
             titleElement.textContent = monthTitle;
             const matchesContainer = document.createElement('div');
             matchesContainer.className = 'flex flex-col';
-            // Sort matches within the group by date, newest first
             group.matches.sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
             group.matches.forEach(match => { matchesContainer.appendChild(buildMatchCardElement(match)); });
             groupContainer.appendChild(titleElement);
             groupContainer.appendChild(matchesContainer);
             matchesGridContainer.appendChild(groupContainer);
         });
+
+        // Pasang Event Listeners untuk tombol Admin setelah rendering
+        attachAdminButtonListeners(); 
     }
 
     function filterAndDisplayMatches() {
@@ -181,67 +224,52 @@
         }
     }
 
-    // --- 5. Fetch Data ---
+    // --- 5. Fetch Data (sama) ---
     async function fetchMatchesFromServer() {
-        console.log("fetchMatchesFromServer started..."); // Debug
         try {
-            // Show loading only if the grid isn't already visible
             if (!matchesGridContainer || matchesGridContainer.classList.contains('hidden')) {
                  displayPageSection({ showLoading: true, showGrid: false, showEmpty: false, showError: false });
              }
-
-            // Add cache busting
             const apiUrl = `${MATCH_API_ENDPOINT}?_=${Date.now()}`;
-            console.log("Fetching from:", apiUrl); // Debug
-
             const response = await fetch(apiUrl, {
-                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } // Added X-Requested-With
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }
             });
-             console.log("Fetch response status:", response.status); // Debug
-
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error("Fetch failed:", errorText); // Debug
                 throw new Error(errorText || `Failed to fetch: ${response.statusText}`);
             }
 
             const data = await response.json();
-            console.log("Fetched data:", data); // Debug
             allMatchesData = data || [];
-            // No need to sort if views.py already sorts by -match_date
             filterAndDisplayMatches();
 
         } catch (error) {
-            console.error('Error in fetchMatchesFromServer:', error); // Debug
+            console.error('Error in fetchMatchesFromServer:', error);
             if (errorMessage) errorMessage.textContent = error.message;
             displayPageSection({ showError: true, showLoading: false, showGrid: false, showEmpty: false });
         } finally {
-             // Ensure loading spinner is always hidden after attempt, even on error
              if (loadingSpinner) loadingSpinner.classList.add('hidden');
          }
     }
 
-    // --- 6. Modal Functions ---
+    // --- 6. Modal Create Functions (sama) ---
     function showFixtureModal() {
-        console.log("showFixtureModal called"); // Debug
         if (!modal || !modalContent) return;
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         setTimeout(() => { modalContent.classList.remove('opacity-0', 'scale-95'); modalContent.classList.add('opacity-100', 'scale-100'); }, 50);
     }
     function hideFixtureModal() {
-        console.log("hideFixtureModal called"); // Debug
         if (!modal || !modalContent) return;
         modalContent.classList.remove('opacity-100', 'scale-100'); modalContent.classList.add('opacity-0', 'scale-95');
         setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 150);
     }
 
-    // --- 7. Submit Match (Mirrors News Logic EXACTLY) ---
+    // --- 7. Submit Match (Create - sama) ---
     async function addMatchEntry(form, submitBtn) {
-        console.log("addMatchEntry started..."); // Debug
+        // ... (Logika sama) ...
         const submitText = submitBtn.querySelector('#submit-text');
         const submitLoading = submitBtn.querySelector('#submit-loading');
-        // const formError = defined globally
 
         submitText.classList.add('hidden');
         submitLoading.classList.remove('hidden');
@@ -250,37 +278,26 @@
 
         try {
             const csrfToken = getCookie('csrftoken');
-            console.log("CSRF Token:", csrfToken); // Debug
-            if (!csrfToken) {
-                 console.warn("CSRF Token not found!"); // Debug warning
-                 // Optional: Show error to user if CSRF is missing
-                 // throw new Error("CSRF Token missing. Please refresh the page.");
-             }
+            if (!csrfToken) { throw new Error("CSRF Token missing. Please refresh the page."); }
 
             const response = await fetch(ADD_MATCH_ENDPOINT, {
                 method: "POST",
                 body: new FormData(form),
-                headers: { 'X-CSRFToken': csrfToken || '' } // Send token
+                headers: { 'X-CSRFToken': csrfToken || '' }
             });
-             console.log("Submit response status:", response.status); // Debug
 
             if (!response.ok) {
                 const errorText = await response.text();
-                console.error("Submit failed:", errorText); // Debug
                 throw new Error(errorText || 'Failed to add match.');
             }
 
-            // --- SUKSES ---
-            console.log("Submit successful!"); // Debug
             form.reset();
             hideFixtureModal();
             showToast('Match Added!', 'Fixture has been added successfully.', 'success');
-
-            console.log("Dispatching matchAdded event..."); // Debug
             document.dispatchEvent(new CustomEvent('matchAdded'));
 
         } catch (error) {
-            console.error('Error in addMatchEntry:', error); // Debug error
+            console.error('Error in addMatchEntry:', error);
             const errorMsg = error.message.includes("INVALID") ? "Error: Pastikan semua field wajib (*) terisi." : `Error: ${error.message}`;
             if (formError) {
                  formError.textContent = errorMsg;
@@ -288,63 +305,243 @@
              }
             showToast('Submission Failed', errorMsg, 'error');
         } finally {
-            // Ensure button is always re-enabled
             submitText.classList.remove('hidden');
             submitLoading.classList.add('hidden');
             submitBtn.disabled = false;
-             console.log("addMatchEntry finished."); // Debug
+        }
+    }
+    
+    // --- 8. Modal Edit Functions (sama) ---
+
+    function showEditFixtureModal() {
+        if (!editModal || !editModalContent) return;
+        editModal.classList.remove('hidden');
+        editModal.classList.add('flex');
+        setTimeout(() => { editModalContent.classList.remove('opacity-0', 'scale-95'); editModalContent.classList.add('opacity-100', 'scale-100'); }, 50);
+    }
+    function hideEditFixtureModal() {
+        if (!editModal || !editModalContent) return;
+        editModalContent.classList.remove('opacity-100', 'scale-100'); editModalContent.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => { 
+            editModal.classList.add('hidden'); 
+            editModal.classList.remove('flex'); 
+            if (editFormError) editFormError.classList.add('hidden');
+        }, 150);
+    }
+    
+    function loadMatchDataToForm(matchId) {
+        const match = allMatchesData.find(m => m.id === matchId);
+        if (!match) { showToast('Error', 'Match data not found.', 'error'); return; }
+
+        // Format date for datetime-local input (YYYY-MM-DDTHH:MM)
+        // Match date from API is ISO format (e.g., "2025-10-24T14:00:00Z"), need to convert to local input format
+        let matchDateISO = '';
+        if (match.match_date) {
+            // Check if the timestamp ends with Z (UTC) and strip it if needed to prevent local conversion bias
+            const dateStr = match.match_date.endsWith('Z') ? match.match_date.slice(0, -1) : match.match_date;
+            
+            // Convert to format required by datetime-local input (YYYY-MM-DDTHH:MM)
+            const dateObj = new Date(dateStr);
+            const yyyy = dateObj.getFullYear();
+            const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+            const dd = String(dateObj.getDate()).padStart(2, '0');
+            const hh = String(dateObj.getHours()).padStart(2, '0');
+            const mi = String(dateObj.getMinutes()).padStart(2, '0');
+            matchDateISO = `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+        }
+
+
+        // Isi form field
+        document.getElementById('edit-match-id').value = match.id;
+        document.getElementById('edit-home_team').value = match.home_team || '';
+        document.getElementById('edit-away_team').value = match.away_team || '';
+        document.getElementById('edit-match_date').value = matchDateISO; // Menggunakan format yang sudah dikonversi
+        document.getElementById('edit-location').value = match.location || '';
+        document.getElementById('edit-category').value = match.category || '';
+        document.getElementById('edit-home_score').value = match.home_score !== null ? match.home_score : '';
+        document.getElementById('edit-away_score').value = match.away_score !== null ? match.away_score : '';
+        document.getElementById('edit-home_code').value = match.home_code || '';
+        document.getElementById('edit-away_code').value = match.away_code || '';
+        document.getElementById('edit-lineup').value = match.lineup || '';
+        document.getElementById('edit-review').value = match.review || '';
+        // ... (Statistik lainnya) ...
+
+        showEditFixtureModal();
+    }
+    
+    // --- 9. AJAX Edit & Delete Functions (DIPERBAIKI penanganan error non-JSON) ---
+
+    async function updateMatchEntry(form, submitBtn, matchId) {
+        const submitText = submitBtn.querySelector('#edit-submit-text');
+        const submitLoading = submitBtn.querySelector('#edit-submit-loading');
+        
+        submitText.classList.add('hidden');
+        submitLoading.classList.remove('hidden');
+        submitBtn.disabled = true;
+        if (editFormError) editFormError.classList.add('hidden');
+
+        let errorMsg = 'Failed to update match due to an unknown error.';
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const endpoint = `${UPDATE_MATCH_BASE_URL}${matchId}/`; // Menggunakan URL yang sudah dikoreksi
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                body: new FormData(form),
+                headers: { 'X-CSRFToken': csrfToken || '' }
+            });
+
+            if (!response.ok) {
+                // Mencoba membaca JSON untuk error terperinci
+                try {
+                    const errorData = await response.json();
+                    if (errorData.errors) {
+                        const validationMsgs = Object.keys(errorData.errors).map(key => `${key}: ${errorData.errors[key].join(', ')}`);
+                        errorMsg = `Validation failed: ${validationMsgs.join(' | ')}`;
+                    } else {
+                        errorMsg = errorData.detail || `Server error. Status: ${response.status}`;
+                    }
+                } catch (e) {
+                    // Jika respons bukan JSON (misal: HTML login/403)
+                    console.error("Non-JSON response received on Update. Status:", response.status);
+                    if (response.status === 403) {
+                        errorMsg = "You are not authorized. Please log in as admin.";
+                    } else {
+                        errorMsg = `Server returned an unexpected response. Status: ${response.status}.`;
+                    }
+                }
+                throw new Error(errorMsg);
+            }
+
+            // --- SUKSES ---
+            hideEditFixtureModal();
+            showToast('Match Updated!', 'Fixture has been updated successfully.', 'success');
+            document.dispatchEvent(new CustomEvent('matchAdded')); // Trigger refresh
+
+        } catch (error) {
+            console.error('Error in updateMatchEntry:', error);
+            const finalErrorMsg = error.message;
+            if (editFormError) {
+                 editFormError.textContent = finalErrorMsg;
+                 editFormError.classList.remove('hidden');
+             }
+            showToast('Update Failed', finalErrorMsg, 'error');
+        } finally {
+            submitText.classList.remove('hidden');
+            submitLoading.classList.add('hidden');
+            submitBtn.disabled = false;
         }
     }
 
-    // --- 8. Event Listeners ---
+    async function deleteMatchEntry(matchId, matchTeams) {
+        if (!confirm(`Are you sure you want to delete the match: ${matchTeams}? This action cannot be undone.`)) {
+            return;
+        }
+        
+        let errorMsg = 'Deletion failed due to an unknown error.';
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            const endpoint = `${DELETE_MATCH_BASE_URL}${matchId}/`; // Menggunakan URL yang sudah dikoreksi
+
+            const response = await fetch(endpoint, {
+                method: "POST",
+                headers: { 
+                    'X-CSRFToken': csrfToken || '',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (!response.ok) {
+                // Mencoba membaca JSON untuk error terperinci
+                try {
+                    const errorData = await response.json();
+                    errorMsg = errorData.detail || `Server error. Status: ${response.status}`;
+                } catch (e) {
+                    // Jika respons bukan JSON (misal: HTML login/403) - INI MEMPERBAIKI KESALAHAN ANDA
+                    console.error("Non-JSON response received on Delete. Status:", response.status);
+                    if (response.status === 403) {
+                        errorMsg = "You are not authorized to delete this match. Please log in as admin.";
+                    } else {
+                        errorMsg = `Server returned an unexpected response. Status: ${response.status}.`;
+                    }
+                }
+                throw new Error(errorMsg);
+            }
+
+            // --- SUKSES ---
+            showToast('Match Deleted!', `${matchTeams} has been deleted.`, 'success');
+            document.dispatchEvent(new CustomEvent('matchAdded')); // Trigger refresh
+
+        } catch (error) {
+            console.error('Error in deleteMatchEntry:', error);
+            showToast('Deletion Failed', error.message, 'error');
+        }
+    }
+
+    function attachAdminButtonListeners() {
+        // Edit Buttons
+        document.querySelectorAll('.edit-match-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault(); 
+                e.stopPropagation(); 
+                const matchId = e.currentTarget.dataset.matchId;
+                loadMatchDataToForm(matchId);
+            });
+        });
+
+        // Delete Buttons
+        document.querySelectorAll('.delete-match-btn').forEach(button => {
+            button.addEventListener('click', (e) => {
+                e.preventDefault(); 
+                e.stopPropagation(); 
+                const matchId = e.currentTarget.dataset.matchId;
+                const matchTeams = e.currentTarget.dataset.matchTeams;
+                deleteMatchEntry(matchId, matchTeams);
+            });
+        });
+    }
+
+    // --- 10. Event Listeners ---
     document.addEventListener('DOMContentLoaded', function() {
-        console.log("DOM Content Loaded"); // Debug
+        // Modal Create Listeners
+        if (openBtn) { openBtn.addEventListener('click', showFixtureModal); }
+        if (openBtnEmpty) { openBtnEmpty.addEventListener('click', showFixtureModal); }
+        if (closeBtn) { closeBtn.addEventListener('click', hideFixtureModal); }
+        if (cancelBtn) { cancelBtn.addEventListener('click', hideFixtureModal); }
+        if (modal) { modal.addEventListener('click', (e) => { if (e.target === modal) hideFixtureModal(); }); }
 
-        // Modal Listeners
-        if (openBtn) {
-             console.log("Adding listener to openBtn"); // Debug
-             openBtn.addEventListener('click', showFixtureModal);
-         } else { console.error("openBtn not found"); }
-        if (openBtnEmpty) {
-             console.log("Adding listener to openBtnEmpty"); // Debug
-             openBtnEmpty.addEventListener('click', showFixtureModal);
-         }
-        if (closeBtn) {
-             console.log("Adding listener to closeBtn"); // Debug
-             closeBtn.addEventListener('click', hideFixtureModal);
-         } else { console.error("closeBtn not found"); }
-        if (cancelBtn) {
-             console.log("Adding listener to cancelBtn"); // Debug
-             cancelBtn.addEventListener('click', hideFixtureModal);
-         } else { console.error("cancelBtn not found"); }
-        if (modal) {
-             console.log("Adding listener to modal background"); // Debug
-             modal.addEventListener('click', (e) => { if (e.target === modal) hideFixtureModal(); });
-         } else { console.error("modal not found"); }
-
-        // Form Submit Listener
+        // Form Submit Listener (Create)
         if (form && submitBtn) {
-            console.log("Adding listener to form submit"); // Debug
             form.addEventListener("submit", function(e) { e.preventDefault(); addMatchEntry(form, submitBtn); });
-        } else {
-             console.error("Form or Submit button not found.");
-         }
+        }
+
+        // Modal Edit Listeners
+        if (closeEditBtn) { closeEditBtn.addEventListener('click', hideEditFixtureModal); }
+        if (cancelEditBtn) { cancelEditBtn.addEventListener('click', hideEditFixtureModal); }
+        if (editModal) { editModal.addEventListener('click', (e) => { if (e.target === editModal) hideEditFixtureModal(); }); }
+        
+        // Form Submit Listener (Edit)
+        if (editForm && editSubmitBtn) {
+            editForm.addEventListener("submit", function(e) { 
+                e.preventDefault(); 
+                const matchId = document.getElementById('edit-match-id').value;
+                updateMatchEntry(editForm, editSubmitBtn, matchId); 
+            });
+        }
 
         // Filter Listener
         if (categoryFilterSelect) {
-            console.log("Adding listener to categoryFilterSelect change"); // Debug
             categoryFilterSelect.addEventListener('change', filterAndDisplayMatches);
-        } else { console.error("categoryFilterSelect not found"); }
+        }
 
-        // Listener untuk Refresh (Mirrors News Logic EXACTLY)
-        console.log("Adding listener for matchAdded event"); // Debug
+        // Listener untuk Refresh data setelah Create/Update/Delete
         document.addEventListener('matchAdded', function() {
-            console.log("matchAdded event heard! Calling fetchMatchesFromServer..."); // Debug log
             fetchMatchesFromServer();
         });
 
         // Initial data fetch
-        console.log("Initial fetchMatchesFromServer call"); // Debug
         fetchMatchesFromServer();
     });
 </script>
