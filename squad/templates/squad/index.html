@@ -9,9 +9,9 @@
 
 {% block content %}
 
-{% static 'squad/hero.jpg' as hero_fallback %}
+{% static 'squad/hero1.png' as hero_fallback %}
 
-{% static 'squad/hero.jpg' as hero_fallback %}
+{% static 'squad/hero1.png' as hero_fallback %}
 
 
 
@@ -19,10 +19,10 @@
   <img
     src="{{ hero_url|default:hero_fallback }}"
     alt="Garuda Squad"
-    class="w-full h-[60vh] md:h-[68vh] object-cover" />
+    class="w-full h-[40vh] md:h-[68vh] object-cover" />
 
   <!-- overlay gradasi -->
-  <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-red-900/60 via-blue-800/10 to-transparent"></div>
+  <div class="absolute inset-0 pointer-events-none bg-gradient-to-t from-red-900/60 via-red-200/10 to-transparent"></div>
 
   <!-- title -->
   <div class="absolute inset-0 flex items-end justify-center pb-12">
@@ -55,20 +55,20 @@
 </nav>
 
   {% if user.is_authenticated and user.is_admin %}
-  <div class="flex justify-center relative z-20">
-<button id="btn-add"
-        data-form-url="{% url 'squad:player_form' %}"
-        data-url="{% url 'squad:player_create' %}"
-        class="inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-xl font-semibold"
-        onclick="openCreateModal(this)">
-  + Tambah Pemain
-</button>
+  <div class="flex justify-center mt-12 relative z-20">
+    <button id="btn-add"
+            data-form-url="{% url 'squad:player_form' %}"
+            data-url="{% url 'squad:player_create' %}"
+            class="inline-flex items-center text-red-700 border-b border-red-700 px-4 py-2 font-semibold"
+            onclick="openCreateModal(this)">
+      + Tambah Pemain
+    </button>
   </div>
   {% endif %}
 <section id="groups" class="max-w-7xl mx-auto mb-20 px-4 md:px-6 space-y-10 mt-8">
     <section class="role-group" data-role="GOALKEEPER">
-    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">GOALKEEPER</h3>
-    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2 mb-4">GOALKEEPER</h3>
+    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12">
       {% for p in players %}{% if p.role_tag == 'GOALKEEPER' %}
         {% include "squad/_player_card.html" with p=p %}
       {% endif %}{% endfor %}
@@ -76,8 +76,8 @@
   </section>
 
   <section class="role-group" data-role="DEFENDER">
-    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">DEFENDER</h3>
-    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2 mb-4">DEFENDER</h3>
+    <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-12">
       {% for p in players %}{% if p.role_tag == 'DEFENDER' %}
         {% include "squad/_player_card.html" with p=p %}
       {% endif %}{% endfor %}
@@ -85,7 +85,7 @@
   </section>
 
   <section class="role-group" data-role="MIDFIELDER">
-    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">MIDFIELDER</h3>
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2 mb-4">MIDFIELDER</h3>
     <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for p in players %}{% if p.role_tag == 'MIDFIELDER' %}
         {% include "squad/_player_card.html" with p=p %}
@@ -94,7 +94,7 @@
   </section>
 
   <section class="role-group" data-role="ATTACKER">
-    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2">ATTACKER</h3>
+    <h3 class="role-title text-lg font-black tracking-wide border-l-4 border-red-700 pl-2 mb-4">ATTACKER</h3>
     <div class="cards grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
       {% for p in players %}{% if p.role_tag == 'ATTACKER' %}
         {% include "squad/_player_card.html" with p=p %}
