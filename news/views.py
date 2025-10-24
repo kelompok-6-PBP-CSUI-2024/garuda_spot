@@ -11,6 +11,50 @@ from django.contrib.auth.decorators import login_required
 
 from .forms import NewsForm
 from .models import News
+from datetime import datetime
+import re
+
+MONTH_MAP = {
+    "jan":1,"januari":1,"feb":2,"februari":2,"mar":3,"maret":3,"apr":4,"april":4,
+    "mei":5,"may":5,"jun":6,"juni":6,"jul":7,"juli":7,"agu":8,"agustus":8,"aug":8,"august":8,
+    "sep":9,"september":9,"okt":10,"oct":10,"oktober":10,"october":10,"nov":11,"november":11,
+    "des":12,"dec":12,"desember":12,"december":12,
+}
+def _extract_month(s: str):
+    if not s: return None
+    m = re.search(r"\d{1,2}\s+([A-Za-zÀ-ÿ\.]+)\s+20\d{2}", s) or \
+        re.search(r"\b([A-Za-zÀ-ÿ\.]+)\b\s+20\d{2}", s)
+    if not m: return None
+    return MONTH_MAP.get(m.group(1).lower().strip("."))
+
+
+def _parse_dt_for_sort(s: str) -> datetime | None:
+    """
+    Accepts strings like:
+    'Kamis, 09 Okt 2025 13:40 WIB' or '09 Okt 2025 13:40', etc.
+    Returns a datetime or None if it can’t be parsed.
+    """
+    if not s:
+        return None
+    s = re.sub(r"^[A-Za-zÀ-ÿ]+,\s*", "", s.strip())
+    m = re.search(r"(\d{1,2})\s+([A-Za-zÀ-ÿ\.]+|\d{1,2})\s+(20\d{2})(?:\s+(\d{1,2}):(\d{2}))?", s)
+    if not m:
+        return None
+    d, mon_s, y, hh, mm = m.groups()
+    try:
+        mon = int(mon_s)
+    except ValueError:
+        mon = MONTH_MAP.get(mon_s.lower().strip("."), None)
+    if not mon:
+        return None
+    h = int(hh) if hh else 0
+    mi = int(mm) if mm else 0
+    try:
+        return datetime(int(y), int(mon), int(d), h, mi)
+    except Exception:
+        return None
+
+
 
 def show_main(request):
     return render(request, "main.html")
@@ -63,7 +107,21 @@ from django.views.decorators.http import require_GET
 
 @require_GET
 def show_json(request):
-    qs = News.objects.all().values("id", "title", "category", "publish_date", "content")
+    month = request.GET.get("month")
+    sort_order = (request.GET.get("sort") or "desc").lower()
+    sort_reverse = False if sort_order == "asc" else True
+
+    qs = News.objects.all()
+    if month and month.isdigit():
+        qs = qs.filter(published_month=int(month))
+
+    items = list(qs.values("id", "title", "category", "publish_date", "content"))
+
+    for x in items:
+        x["_ts"] = _parse_dt_for_sort(x.get("publish_date", "")) or datetime.min
+
+    items.sort(key=lambda x: x["_ts"], reverse=sort_reverse)
+
     try:
         page = int(request.GET.get("page", 1))
     except ValueError:
@@ -74,24 +132,19 @@ def show_json(request):
         page_size = 20
     page_size = max(1, min(page_size, 100))
 
-    paginator = Paginator(qs, page_size)
-    try:
-        page_obj = paginator.page(page)
-    except EmptyPage:
-        return JsonResponse({
-            "items": [],
-            "page": page,
-            "page_size": page_size,
-            "has_next": False,
-            "total": paginator.count,
-        })
+    total = len(items)
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_items = items[start:end]
+    for x in page_items:
+        x.pop("_ts", None)
 
     return JsonResponse({
-        "items": list(page_obj.object_list),
+        "items": page_items,
         "page": page,
         "page_size": page_size,
-        "has_next": page_obj.has_next(),
-        "total": paginator.count,
+        "has_next": end < total,
+        "total": total,
     })
 
 
@@ -128,10 +181,12 @@ def add_news_entry_ajax(request):
     if not (title and category and content):
         return JsonResponse({"error": "title, category, content are required"}, status=400)
 
+    publish_date = strip_tags(request.POST.get("publish_date", "")).strip()
     n = News.objects.create(
         title=title,
         category=category,
         publish_date=publish_date,
+        published_month=_extract_month(publish_date),
         content=content,
     )
     return JsonResponse(
