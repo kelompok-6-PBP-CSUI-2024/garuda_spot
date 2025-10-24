@@ -1,0 +1,191 @@
+<div id="fixture-modal" class="hidden fixed inset-0 z-50 w-full flex items-center justify-center bg-gray-800 bg-opacity-50">
+    <div id="fixture-modal-content" class="bg-white rounded-lg shadow-lg w-full max-w-3xl mx-auto max-h-[90vh] transition-all duration-150 opacity-0 scale-95">
+        
+        <div class="flex items-center justify-between p-4 border-b">
+            <div>
+                <h3 class="text-xl font-semibold text-gray-900">Create New Match</h3>
+                <p class="text-sm text-gray-600 mt-1">Add a new fixture to the schedule</p>
+            </div>
+            <button type="button" id="close-fixture-modal-btn" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+                <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                <span class="sr-only">Close modal</span>
+            </button>
+        </div>
+
+        <div class="px-6 py-4 space-y-6">
+            <form id="create-match-form" class="max-h-[70vh] overflow-y-auto pr-2">
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="home_team" class="block text-sm font-medium text-gray-700">Home Team*</label>
+                        <input type="text" name="home_team" id="home_team" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm" value="Indonesia">
+                    </div>
+                    <div>
+                        <label for="away_team" class="block text-sm font-medium text-gray-700">Away Team*</label>
+                        <input type="text" name="away_team" id="away_team" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="home_code" class="block text-sm font-medium text-gray-700">Home Code (3 L)</label>
+                        <input type="text" name="home_code" id="home_code" maxlength="3" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm" placeholder="IDN">
+                    </div>
+                    <div>
+                        <label for="away_code" class="block text-sm font-medium text-gray-700">Away Code (3 L)</label>
+                        <input type="text" name="away_code" id="away_code" maxlength="3" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm" placeholder="AWY">
+                    </div>
+                    <div>
+                        <label for="match_date" class="block text-sm font-medium text-gray-700">Match Date*</label>
+                        <input type="datetime-local" name="match_date" id="match_date" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="location" class="block text-sm font-medium text-gray-700">Location*</label>
+                        <input type="text" name="location" id="location" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="category" class="block text-sm font-medium text-gray-700">Category*</label>
+                        <select name="category" id="category" required class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm bg-white">
+                            {% for cat in categories %}
+                                <option value="{{ cat }}">{{ cat }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div>
+                        <label for="home_score" class="block text-sm font-medium text-gray-700">Home Score</label>
+                        <input type="number" name="home_score" id="home_score" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                    <div>
+                        <label for="away_score" class="block text-sm font-medium text-gray-700">Away Score</label>
+                        <input type="number" name="away_score" id="away_score" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                    </div>
+                </div>
+
+                <details class="mb-4">
+                    <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                        Add Match Statistics (Optional)
+                    </summary>
+                    <fieldset class="border border-gray-300 p-4 rounded-md mt-2">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4">
+                            <div class="space-y-4">
+                                <h4 class="text-md font-semibold text-center">HOME</h4>
+                                <div>
+                                    <label for="shots_home" class="block text-sm font-medium text-gray-700">Shots</label>
+                                    <input type="number" name="shots_home" id="shots_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="shots_on_target_home" class="block text-sm font-medium text-gray-700">Shots on Target</label>
+                                    <input type="number" name="shots_on_target_home" id="shots_on_target_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="possession_home" class="block text-sm font-medium text-gray-700">Possession (%)</label>
+                                    <input type="number" name="possession_home" id="possession_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="passes_home" class="block text-sm font-medium text-gray-700">Passes</label>
+                                    <input type="number" name="passes_home" id="passes_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="pass_accuracy_home" class="block text-sm font-medium text-gray-700">Pass Accuracy (%)</label>
+                                    <input type="number" name="pass_accuracy_home" id="pass_accuracy_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="fouls_home" class="block text-sm font-medium text-gray-700">Fouls</label>
+                                    <input type="number" name="fouls_home" id="fouls_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="yellow_cards_home" class="block text-sm font-medium text-gray-700">Yellow Cards</label>
+                                    <input type="number" name="yellow_cards_home" id="yellow_cards_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="red_cards_home" class="block text-sm font-medium text-gray-700">Red Cards</label>
+                                    <input type="number" name="red_cards_home" id="red_cards_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="offsides_home" class="block text-sm font-medium text-gray-700">Offsides</label>
+                                    <input type="number" name="offsides_home" id="offsides_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="corners_home" class="block text-sm font-medium text-gray-700">Corners</label>
+                                    <input type="number" name="corners_home" id="corners_home" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                            </div>
+                            <div class="space-y-4">
+                                <h4 class="text-md font-semibold text-center">AWAY</h4>
+                                <div>
+                                    <label for="shots_away" class="block text-sm font-medium text-gray-700">Shots</label>
+                                    <input type="number" name="shots_away" id="shots_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="shots_on_target_away" class="block text-sm font-medium text-gray-700">Shots on Target</label>
+                                    <input type="number" name="shots_on_target_away" id="shots_on_target_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="possession_away" class="block text-sm font-medium text-gray-700">Possession (%)</label>
+                                    <input type="number" name="possession_away" id="possession_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="passes_away" class="block text-sm font-medium text-gray-700">Passes</label>
+                                    <input type="number" name="passes_away" id="passes_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="pass_accuracy_away" class="block text-sm font-medium text-gray-700">Pass Accuracy (%)</label>
+                                    <input type="number" name="pass_accuracy_away" id="pass_accuracy_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="fouls_away" class="block text-sm font-medium text-gray-700">Fouls</label>
+                                    <input type="number" name="fouls_away" id="fouls_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="yellow_cards_away" class="block text-sm font-medium text-gray-700">Yellow Cards</label>
+                                    <input type="number" name="yellow_cards_away" id="yellow_cards_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="red_cards_away" class="block text-sm font-medium text-gray-700">Red Cards</label>
+                                    <input type="number" name="red_cards_away" id="red_cards_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="offsides_away" class="block text-sm font-medium text-gray-700">Offsides</label>
+                                    <input type="number" name="offsides_away" id="offsides_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                                <div>
+                                    <label for="corners_away" class="block text-sm font-medium text-gray-700">Corners</label>
+                                    <input type="number" name="corners_away" id="corners_away" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm">
+                                </div>
+                            </div>
+                        </div>
+                    </fieldset>
+                </details>
+
+                <details class="mb-4">
+                    <summary class="cursor-pointer text-sm font-medium text-gray-700 hover:text-gray-900">
+                        Add Other Details (Lineup, Review)
+                    </summary>
+                    <div class="space-y-4 mt-2 border border-gray-300 p-4 rounded-md">
+
+
+                        <div>
+                            <label for="lineup" class="block text-sm font-medium text-gray-700">Lineup (Optional)</label>
+                            <textarea name="lineup" id="lineup" rows="3" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm"></textarea>
+                        </div>
+                        <div>
+                            <label for="review" class="block text-sm font-medium text-gray-700">Review (Optional)</label>
+                            <textarea name="review" id="review" rows="3" class="mt-1 p-2 block w-full border border-gray-300 rounded-md shadow-sm"></textarea>
+                        </div>
+                    </div>
+                </details>
+
+                <div id="form-error" class="text-red-600 text-sm mb-4 hidden"></div>
+            </form>
+        </div>
+
+        <div class="flex flex-col sm:flex-row gap-4 p-6 border-t border-gray-200 rounded-b">
+            <button type="button" id="cancel-fixture-btn" class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">Cancel</button>
+            <button type="submit" id="submit-fixture-btn" form="create-match-form" class="order-1 sm:order-2 flex-1 bg-red-600 text-white px-6 py-3 rounded-md font-medium hover:bg-red-700 transition-colors">
+                <span id="submit-text">Publish Match</span>
+                <span id="submit-loading" class="hidden">Publishing...</span>
+            </button>
+        </div>
+
+    </div>
+</div>

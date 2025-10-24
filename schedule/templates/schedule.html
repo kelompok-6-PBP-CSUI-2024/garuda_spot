@@ -1,0 +1,352 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="md:mt-20 md:mx-36 bg-white">
+
+    <h2 class="pt-12 mb-3 text-6xl font-extrabold text-center">Fixtures & Results</h2>
+
+    <div class="flex justify-between mb-8 ml-8 mt-12">
+        <form method="get" id="categoryFilterForm">
+            <select name="category" onchange="filterAndDisplayMatches()"
+                    class="border-b-2 border-red-600 px-8 py-2 text-sm cursor-pointer">
+                <option value="">All Categories</option>
+                {% for cat in categories %}
+                    <option value="{{ cat }}">{{ cat }}</option>
+                {% endfor %}
+            </select>
+        </form>
+        <div class="text-end mb-3 mr-8">
+            <button type="button" id="open-fixture-modal-btn" class="border-b-2 border-red-600 px-8 py-2 text-sm cursor-pointer">+ Fixtures</button>
+        </div>
+    </div>
+
+    <div id="loading" class="bg-white py-12 text-center">
+      <svg class="animate-spin h-8 w-8 text-red-600 inline-block" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"></path>
+      </svg>
+      <p class="text-gray-600 mt-3">Loading matches...</p>
+    </div>
+
+    <div id="error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative m-4" role="alert">
+        <strong class="font-bold">Error!</strong>
+        <span class="block sm:inline" id="error-message">Failed to load matches.</span>
+    </div>
+
+    <div id="grid" class="hidden"></div>
+
+    <div id="empty" class="bg-white py-12 text-center hidden">
+        <h3 class="text-lg font-medium text-gray-900 mb-2">No matches found</h3>
+        <p class="text-gray-500 mb-6">There are no matches scheduled for this category.</p>
+        <button type="button" id="open-fixture-modal-btn-empty" class="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors">
+            + Add Fixture
+        </button>
+    </div>
+
+</div>
+
+{% include 'create_match_modal.html' %}
+
+<div id="toast-component" class="fixed bottom-5 right-5 w-full max-w-xs p-4 rounded-lg shadow-lg transition-all duration-300 opacity-0 translate-y-64" style="z-index: 100;">
+    <h3 id="toast-title" class="font-semibold"></h3>
+    <p id="toast-message" class="text-sm"></p>
+</div>
+
+<script src="{% static 'js/toast.js' %}"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script>
+    // --- 1. Konfigurasi & Variabel Global ---
+    const MATCH_API_ENDPOINT = "{% url 'schedule:show_json' %}";
+    const ADD_MATCH_ENDPOINT = "{% url 'schedule:add_match_ajax' %}";
+    let allMatchesData = [];
+
+    // --- 2. Elemen DOM ---
+    const loadingSpinner = document.getElementById('loading');
+    const errorDisplay = document.getElementById('error');
+    const errorMessage = document.getElementById('error-message');
+    const emptyStateDisplay = document.getElementById('empty');
+    const matchesGridContainer = document.getElementById('grid');
+    const categoryFilterSelect = document.getElementById('categoryFilterForm').querySelector('select');
+    const modal = document.getElementById('fixture-modal');
+    const modalContent = document.getElementById('fixture-modal-content');
+    const openBtn = document.getElementById('open-fixture-modal-btn');
+    const openBtnEmpty = document.getElementById('open-fixture-modal-btn-empty');
+    const closeBtn = document.getElementById('close-fixture-modal-btn');
+    const cancelBtn = document.getElementById('cancel-fixture-btn');
+    const form = document.getElementById('create-match-form');
+    const submitBtn = document.getElementById('submit-fixture-btn');
+    const formError = document.getElementById('form-error');
+
+    // --- 3. Utility Functions ---
+    function setVis(el, show) { if (el) el.classList.toggle('hidden', !show); }
+    function displayPageSection({ showLoading = false, showError = false, showEmpty = false, showGrid = false }) {
+        setVis(loadingSpinner, showLoading);
+        setVis(errorDisplay, showError);
+        setVis(emptyStateDisplay, showEmpty);
+        setVis(matchesGridContainer, showGrid); // Use toggle based on showGrid
+        // Ensure container is displayed correctly when grid is shown
+        if (matchesGridContainer) {
+            matchesGridContainer.style.display = showGrid ? '' : 'none'; // Use display none/block
+        }
+    }
+    function getCookie(name) {
+        const v = document.cookie.split('; ').find(row => row.startsWith(name + '='));
+        return v ? decodeURIComponent(v.split('=')[1]) : null;
+    }
+
+    // --- 4. Render Card Match ---
+    function buildMatchCardElement(match) {
+        const anchor = document.createElement('a');
+        const linkDetail = `{% url 'schedule:show_match' '00000000-0000-0000-0000-000000000000' %}`.replace('00000000-0000-0000-0000-000000000000', match.id);
+        anchor.href = linkDetail;
+
+        // Sanitize data
+        const location = DOMPurify.sanitize(match.location);
+        const category = DOMPurify.sanitize(match.category);
+        const categoryImg = DOMPurify.sanitize(match.category_image_url);
+        const homeCode = DOMPurify.sanitize(match.home_code || '');
+        const homeTeam = DOMPurify.sanitize(match.home_team);
+        const awayCode = DOMPurify.sanitize(match.away_code || '');
+        const awayTeam = DOMPurify.sanitize(match.away_team);
+
+        // Format Date
+        const matchDate = new Date(match.match_date);
+        const dateOptions = { weekday: 'long', day: '2-digit', month: 'short', year: 'numeric' };
+        const formattedDate = matchDate.toLocaleDateString('en-US', dateOptions).replace(',', '');
+
+        // Conditional HTML
+        const categoryImgHtml = (categoryImg) ? `<img src="${categoryImg}" class="w-8 mb-2 inline-block ml-2" alt="">` : '';
+        const scoreHtml = (match.home_score !== null && match.away_score !== null) ? `${match.home_score} - ${match.away_score}` : 'vs';
+
+        // Build HTML
+        anchor.innerHTML = `
+            <div class="flex flex-col bg-white border-b border-t border-red-600 items-center hover:bg-white hover:shadow-lg hover:-translate-y-1 py-4 px-2 transition-all duration-300 ease-in-out">
+                <div class="flex flex-row justify-between items-start gap-3 w-full max-w-12xl px-4">
+                    <div> <p class="text-md">${formattedDate}</p> <p class="font-light text-md">${location}</p> </div>
+                    <div class="flex flex-row justify-center items-start gap-1"> <span class="font text-red-700 text-md block">${category}</span> ${categoryImgHtml} </div>
+                </div>
+                <div class="relative flex items-center justify-between w-full max-w-4xl my-2 px-4 py-4">
+                  <div class="mr-2 flex flex-row-reverse items-center gap-3 flex-1 min-w-0">
+                    <img src="https://flagcdn.com/w160/${homeCode.toLowerCase()}.png" onerror="this.style.display='none'; this.onerror=null;" class=" h-10 border border-gray-400 object-cover shrink-0">
+                    <span class="font-semibold uppercase text-xl text-right truncate">${homeTeam}</span>
+                  </div>
+                  <div class="w-32 flex justify-center"> <h2 class="text-xl font-semibold px-6 py-2 bg-red-100/80 rounded-md text-center">${scoreHtml}</h2> </div>
+                  <div class="ml-2 flex flex-row items-center gap-3 flex-1 min-w-0">
+                    <img src="https://flagcdn.com/w160/${awayCode.toLowerCase()}.png" onerror="this.style.display='none'; this.onerror=null;" class="h-10 border border-gray-400 object-cover shrink-0">
+                    <span class="font-semibold uppercase text-xl text-left truncate">${awayTeam}</span>
+                  </div>
+                </div>
+            </div>`;
+        return anchor;
+    }
+
+    function renderAllMatches(matches) {
+        if (!matchesGridContainer) return;
+        matchesGridContainer.innerHTML = ''; // Clear previous content
+        const monthGroups = {};
+        matches.forEach(match => {
+            const date = new Date(match.match_date);
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            if (!monthGroups[monthKey]) { monthGroups[monthKey] = { month_date: new Date(date.getFullYear(), date.getMonth(), 1), matches: [] }; }
+            monthGroups[monthKey].matches.push(match);
+        });
+        const sortedGroups = Object.values(monthGroups).sort((a, b) => b.month_date - a.month_date); // Newest month first
+        sortedGroups.forEach(group => {
+            const groupContainer = document.createElement('div');
+            groupContainer.className = 'my-4 mx-4 bg-white py-4 px-4';
+            const monthTitle = group.month_date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+            const titleElement = document.createElement('h3');
+            titleElement.className = 'text-3xl font-semibold mt-6 mb-10 border-l-4 border-red-700 pl-4';
+            titleElement.textContent = monthTitle;
+            const matchesContainer = document.createElement('div');
+            matchesContainer.className = 'flex flex-col';
+            // Sort matches within the group by date, newest first
+            group.matches.sort((a, b) => new Date(b.match_date) - new Date(a.match_date));
+            group.matches.forEach(match => { matchesContainer.appendChild(buildMatchCardElement(match)); });
+            groupContainer.appendChild(titleElement);
+            groupContainer.appendChild(matchesContainer);
+            matchesGridContainer.appendChild(groupContainer);
+        });
+    }
+
+    function filterAndDisplayMatches() {
+        const selectedCategory = categoryFilterSelect ? categoryFilterSelect.value : '';
+        const filteredMatches = selectedCategory ? allMatchesData.filter(match => match.category === selectedCategory) : allMatchesData;
+
+        if (filteredMatches.length === 0) {
+            displayPageSection({ showEmpty: true, showGrid: false, showLoading: false, showError: false });
+        } else {
+            renderAllMatches(filteredMatches);
+            displayPageSection({ showGrid: true, showEmpty: false, showLoading: false, showError: false });
+        }
+    }
+
+    // --- 5. Fetch Data ---
+    async function fetchMatchesFromServer() {
+        console.log("fetchMatchesFromServer started..."); // Debug
+        try {
+            // Show loading only if the grid isn't already visible
+            if (!matchesGridContainer || matchesGridContainer.classList.contains('hidden')) {
+                 displayPageSection({ showLoading: true, showGrid: false, showEmpty: false, showError: false });
+             }
+
+            // Add cache busting
+            const apiUrl = `${MATCH_API_ENDPOINT}?_=${Date.now()}`;
+            console.log("Fetching from:", apiUrl); // Debug
+
+            const response = await fetch(apiUrl, {
+                headers: { 'Accept': 'application/json', 'X-Requested-With': 'XMLHttpRequest' } // Added X-Requested-With
+            });
+             console.log("Fetch response status:", response.status); // Debug
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Fetch failed:", errorText); // Debug
+                throw new Error(errorText || `Failed to fetch: ${response.statusText}`);
+            }
+
+            const data = await response.json();
+            console.log("Fetched data:", data); // Debug
+            allMatchesData = data || [];
+            // No need to sort if views.py already sorts by -match_date
+            filterAndDisplayMatches();
+
+        } catch (error) {
+            console.error('Error in fetchMatchesFromServer:', error); // Debug
+            if (errorMessage) errorMessage.textContent = error.message;
+            displayPageSection({ showError: true, showLoading: false, showGrid: false, showEmpty: false });
+        } finally {
+             // Ensure loading spinner is always hidden after attempt, even on error
+             if (loadingSpinner) loadingSpinner.classList.add('hidden');
+         }
+    }
+
+    // --- 6. Modal Functions ---
+    function showFixtureModal() {
+        console.log("showFixtureModal called"); // Debug
+        if (!modal || !modalContent) return;
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        setTimeout(() => { modalContent.classList.remove('opacity-0', 'scale-95'); modalContent.classList.add('opacity-100', 'scale-100'); }, 50);
+    }
+    function hideFixtureModal() {
+        console.log("hideFixtureModal called"); // Debug
+        if (!modal || !modalContent) return;
+        modalContent.classList.remove('opacity-100', 'scale-100'); modalContent.classList.add('opacity-0', 'scale-95');
+        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('flex'); }, 150);
+    }
+
+    // --- 7. Submit Match (Mirrors News Logic EXACTLY) ---
+    async function addMatchEntry(form, submitBtn) {
+        console.log("addMatchEntry started..."); // Debug
+        const submitText = submitBtn.querySelector('#submit-text');
+        const submitLoading = submitBtn.querySelector('#submit-loading');
+        // const formError = defined globally
+
+        submitText.classList.add('hidden');
+        submitLoading.classList.remove('hidden');
+        submitBtn.disabled = true;
+        if (formError) formError.classList.add('hidden');
+
+        try {
+            const csrfToken = getCookie('csrftoken');
+            console.log("CSRF Token:", csrfToken); // Debug
+            if (!csrfToken) {
+                 console.warn("CSRF Token not found!"); // Debug warning
+                 // Optional: Show error to user if CSRF is missing
+                 // throw new Error("CSRF Token missing. Please refresh the page.");
+             }
+
+            const response = await fetch(ADD_MATCH_ENDPOINT, {
+                method: "POST",
+                body: new FormData(form),
+                headers: { 'X-CSRFToken': csrfToken || '' } // Send token
+            });
+             console.log("Submit response status:", response.status); // Debug
+
+            if (!response.ok) {
+                const errorText = await response.text();
+                console.error("Submit failed:", errorText); // Debug
+                throw new Error(errorText || 'Failed to add match.');
+            }
+
+            // --- SUKSES ---
+            console.log("Submit successful!"); // Debug
+            form.reset();
+            hideFixtureModal();
+            showToast('Match Added!', 'Fixture has been added successfully.', 'success');
+
+            console.log("Dispatching matchAdded event..."); // Debug
+            document.dispatchEvent(new CustomEvent('matchAdded'));
+
+        } catch (error) {
+            console.error('Error in addMatchEntry:', error); // Debug error
+            const errorMsg = error.message.includes("INVALID") ? "Error: Pastikan semua field wajib (*) terisi." : `Error: ${error.message}`;
+            if (formError) {
+                 formError.textContent = errorMsg;
+                 formError.classList.remove('hidden');
+             }
+            showToast('Submission Failed', errorMsg, 'error');
+        } finally {
+            // Ensure button is always re-enabled
+            submitText.classList.remove('hidden');
+            submitLoading.classList.add('hidden');
+            submitBtn.disabled = false;
+             console.log("addMatchEntry finished."); // Debug
+        }
+    }
+
+    // --- 8. Event Listeners ---
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log("DOM Content Loaded"); // Debug
+
+        // Modal Listeners
+        if (openBtn) {
+             console.log("Adding listener to openBtn"); // Debug
+             openBtn.addEventListener('click', showFixtureModal);
+         } else { console.error("openBtn not found"); }
+        if (openBtnEmpty) {
+             console.log("Adding listener to openBtnEmpty"); // Debug
+             openBtnEmpty.addEventListener('click', showFixtureModal);
+         }
+        if (closeBtn) {
+             console.log("Adding listener to closeBtn"); // Debug
+             closeBtn.addEventListener('click', hideFixtureModal);
+         } else { console.error("closeBtn not found"); }
+        if (cancelBtn) {
+             console.log("Adding listener to cancelBtn"); // Debug
+             cancelBtn.addEventListener('click', hideFixtureModal);
+         } else { console.error("cancelBtn not found"); }
+        if (modal) {
+             console.log("Adding listener to modal background"); // Debug
+             modal.addEventListener('click', (e) => { if (e.target === modal) hideFixtureModal(); });
+         } else { console.error("modal not found"); }
+
+        // Form Submit Listener
+        if (form && submitBtn) {
+            console.log("Adding listener to form submit"); // Debug
+            form.addEventListener("submit", function(e) { e.preventDefault(); addMatchEntry(form, submitBtn); });
+        } else {
+             console.error("Form or Submit button not found.");
+         }
+
+        // Filter Listener
+        if (categoryFilterSelect) {
+            console.log("Adding listener to categoryFilterSelect change"); // Debug
+            categoryFilterSelect.addEventListener('change', filterAndDisplayMatches);
+        } else { console.error("categoryFilterSelect not found"); }
+
+        // Listener untuk Refresh (Mirrors News Logic EXACTLY)
+        console.log("Adding listener for matchAdded event"); // Debug
+        document.addEventListener('matchAdded', function() {
+            console.log("matchAdded event heard! Calling fetchMatchesFromServer..."); // Debug log
+            fetchMatchesFromServer();
+        });
+
+        // Initial data fetch
+        console.log("Initial fetchMatchesFromServer call"); // Debug
+        fetchMatchesFromServer();
+    });
+</script>
+{% endblock %}

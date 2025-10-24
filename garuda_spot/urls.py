@@ -25,4 +25,5 @@ urlpatterns = [
     path("squad/", include("squad.urls", namespace="squad")),
     path("tickets/", include("ticket.urls", namespace="tickets")),
     path("forum/", include("forum.urls", namespace="forum")),
+    path("schedule/", include("schedule.urls", namespace="schedule")),
 ]
