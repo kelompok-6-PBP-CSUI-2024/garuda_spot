@@ -1,12 +1,12 @@
-<div id="fixture-modal" class="hidden fixed inset-0 z-50 w-full flex items-center justify-center bg-gray-800 bg-opacity-50">
-    <div id="fixture-modal-content" class="bg-white rounded-lg shadow-lg w-full max-w-3xl mx-auto max-h-[90vh] transition-all duration-150 opacity-0 scale-95">
+<div id="match-modal" class="hidden fixed inset-0 z-50 w-full flex items-center justify-center bg-gray-800 bg-opacity-50">
+    <div id="match-modal-content" class="bg-white rounded-lg shadow-lg w-full max-w-3xl mx-auto max-h-[90vh] transition-all duration-150 opacity-0 scale-95">
         
         <div class="flex items-center justify-between p-4 border-b">
             <div>
                 <h3 class="text-xl font-semibold text-gray-900">Create New Match</h3>
-                <p class="text-sm text-gray-600 mt-1">Add a new fixture to the schedule</p>
+                <p class="text-sm text-gray-600 mt-1">Add a new match to the schedule</p>
             </div>
-            <button type="button" id="close-fixture-modal-btn" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
+            <button type="button" id="close-match-modal-btn" class="text-gray-400 bg-transparent hover:bg-gray-200 hover:text-gray-900 rounded-lg text-sm p-1.5 ml-auto inline-flex items-center">
                 <svg aria-hidden="true" class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
                 <span class="sr-only">Close modal</span>
             </button>
@@ -180,8 +180,8 @@
         </div>
 
         <div class="flex flex-col sm:flex-row gap-4 p-6 border-t border-gray-200 rounded-b">
-            <button type="button" id="cancel-fixture-btn" class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">Cancel</button>
-            <button type="submit" id="submit-fixture-btn" form="create-match-form" class="order-1 sm:order-2 flex-1 bg-red-600 text-white px-6 py-3 rounded-md font-medium hover:bg-red-700 transition-colors">
+            <button type="button" id="cancel-match-btn" class="order-2 sm:order-1 px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors text-center">Cancel</button>
+            <button type="submit" id="submit-match-btn" form="create-match-form" class="order-1 sm:order-2 flex-1 bg-red-600 text-white px-6 py-3 rounded-md font-medium hover:bg-red-700 transition-colors">
                 <span id="submit-text">Publish Match</span>
                 <span id="submit-loading" class="hidden">Publishing...</span>
             </button>

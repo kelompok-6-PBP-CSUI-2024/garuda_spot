@@ -38,7 +38,7 @@
                 <p class="text-md">{{ s.match_date|date:"l, d M Y" }}</p>
                 <p class="font-light text-md">{{ s.location }}</p>
             </div>
-            <span class="font-semibold uppercase text-xl text-right truncate">{{ s.home_team }}</span>
+            
             <div class="flex flex-row justify-center items-start gap-1">
                 <span class="font text-red-700 text-md block">{{ s.category }}</span>
                 {% if s.category_image_url != '' %}
