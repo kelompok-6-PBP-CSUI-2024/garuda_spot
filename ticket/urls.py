@@ -13,7 +13,7 @@ from .views import (
     ticket_detail,
 )
 
-app_name = "ticket"
+app_name = "tickets"
 
 urlpatterns = [
     path("", main_view, name="main_view"),

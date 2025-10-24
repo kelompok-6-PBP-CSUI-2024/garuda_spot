@@ -2,17 +2,20 @@
 {% load static %}
 
 {% block content %}
+      <h1 class="text-3xl font-bold text-gray-900 mb-2 sm:px-2 lg:px-1">
+        Ticket
+      </h1>
 
-<div class="flex items-center justify-between mb-4">
+<div class="flex items-center justify-between mb-4 sm:px-2 lg:px-1">
   <div class="flex items-center gap-2">
     {% if user.is_authenticated and user.is_superuser %}
-      <button id="btn-open-create" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white">Create Ticket</button>
+      <button id="btn-open-create" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white ml-px">Create Ticket</button>
     {% elif user.is_authenticated and user.is_admin %}
-      <button id="btn-open-create" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white">Create Ticket</button>
+      <button id="btn-open-create" class="px-4 py-2 rounded bg-[#e11d2a] hover:bg-[#b91c1c] text-white ml-px">Create Ticket</button>
     {% endif %}
   </div>
   <div class="relative inline-block">
-    <select id="sort-select" class="px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900">
+    <select id="sort-select" class="px-4 py-2.5 rounded-xl border border-gray-300 bg-white text-slate-900 mr-px">
       <option value="date_desc">Date: Newest</option>
       <option value="date_asc">Date: Oldest</option>
       <option value="id_desc">ID: High to Low</option>
@@ -73,7 +76,7 @@
 
   function buildMatchCard(item) {
     const el = document.createElement('article');
-    el.className = 'bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden';
+    el.className = 'relative bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow duration-200 overflow-hidden';
 
     const wrapper = document.createElement('div');
     wrapper.className = 'p-5';
@@ -99,7 +102,7 @@
 
     if (item.img_cup) {
       const cup = document.createElement('img');
-      cup.src = item.img_cup; cup.alt='Cup'; cup.className='absolute top-2 right-2 w-10 h-10 object-cover rounded-md shadow';
+      cup.src = item.img_cup; cup.alt='Cup'; cup.className = 'absolute top-2 right-2 w-10 h-10 object-cover rounded-md shadow transition-opacity duration-200 group-hover:opacity-90';
       el.appendChild(cup);
     }
 

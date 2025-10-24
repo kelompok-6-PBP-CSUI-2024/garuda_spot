@@ -92,7 +92,7 @@ class TicketViewsTests(TestCase):
             img_team1="https://example.com/a.png",
             img_team2="https://example.com/b.png",
             img_cup=None,
-            place=None,
+            place="Stadium",
             date=timezone.now().date(),
         )
         TicketLink.objects.create(
@@ -120,7 +120,7 @@ class TicketViewsTests(TestCase):
             img_team1="https://example.com/a.png",
             img_team2="https://example.com/b.png",
             img_cup=None,
-            place=None,
+            place="Stadium",
             date=timezone.now().date(),
         )
         r = self.client.get(reverse("tickets:detail", args=[m.match_id]))
@@ -162,3 +162,55 @@ class TicketViewsTests(TestCase):
     def test_tickets_root_url(self):
         r = self.client.get("/tickets/")
         self.assertEqual(r.status_code, 200)
+
+    def test_json_by_id_endpoint(self):
+        m = TicketMatch.objects.create(
+            team1="X",
+            team2="Y",
+            img_team1="https://example.com/x.png",
+            img_team2="https://example.com/y.png",
+            img_cup=None,
+            place="National Stadium",
+            date=timezone.now().date(),
+        )
+        r = self.client.get(reverse("tickets:show_json_by_id", args=[m.id]))
+        self.assertEqual(r.status_code, 200)
+        data = r.json()
+        self.assertEqual(data["id"], m.id)
+        self.assertEqual(data["match_id"], str(m.match_id))
+
+    def test_edit_invalid_returns_400(self):
+        # admin create a match
+        self.assertTrue(self.login_admin())
+        r = self.client.post(reverse("tickets:create_ticket"), self._create_match_payload())
+        self.assertEqual(r.status_code, 201)
+        m = TicketMatch.objects.first()
+        # attempt invalid edit (blank team1)
+        bad = self._create_match_payload(team1="")
+        r = self.client.post(reverse("tickets:edit_ticket", args=[m.match_id]), bad)
+        self.assertEqual(r.status_code, 400)
+
+    def test_non_admin_delete_forbidden(self):
+        # seed a match and link directly
+        m = TicketMatch.objects.create(
+            team1="C",
+            team2="D",
+            img_team1="https://example.com/c.png",
+            img_team2="https://example.com/d.png",
+            img_cup=None,
+            place="Arena",
+            date=timezone.now().date(),
+        )
+        l = TicketLink.objects.create(
+            match=m,
+            vendor="Vend",
+            vendor_link="https://v.example.com",
+            price=100,
+            img_vendor="https://v.example.com/logo.png",
+        )
+        # login as normal user
+        self.client.force_login(self.user)
+        r = self.client.post(reverse("tickets:delete_link", args=[l.link_id]))
+        self.assertEqual(r.status_code, 403)
+        r = self.client.post(reverse("tickets:delete_ticket", args=[m.match_id]))
+        self.assertEqual(r.status_code, 403)
