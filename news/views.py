@@ -201,6 +201,49 @@ def add_news_entry_ajax(request):
     )
 
 @csrf_exempt
+@require_POST
+def add_news_mobile(request):
+    """
+    CSRF-exempt create endpoint for mobile/web clients.
+    Accepts form or JSON body with title, category, publish_date (optional), content.
+    """
+    title = strip_tags(request.POST.get("title", "")).strip() if request.POST else ""
+    category = strip_tags(request.POST.get("category", "")).strip() if request.POST else ""
+    publish_date = strip_tags(request.POST.get("publish_date", "")).strip() if request.POST else ""
+    content = strip_tags(request.POST.get("content", "")) if request.POST else ""
+
+    if request.content_type == "application/json" and (not title and not category and not content):
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+        title = strip_tags(data.get("title", "")).strip()
+        category = strip_tags(data.get("category", "")).strip()
+        publish_date = strip_tags(data.get("publish_date", "")).strip()
+        content = strip_tags(data.get("content", ""))
+
+    if not (title and category and content):
+        return JsonResponse({"error": "title, category, content are required"}, status=400)
+
+    n = News.objects.create(
+        title=title,
+        category=category,
+        publish_date=publish_date,
+        published_month=_extract_month(publish_date),
+        content=content,
+    )
+    return JsonResponse(
+        {
+            "id": str(n.id),
+            "title": n.title,
+            "category": n.category,
+            "publish_date": n.publish_date,
+            "content": n.content,
+        },
+        status=201,
+    )
+
+@csrf_exempt
 @require_http_methods(["GET", "POST"])
 def api_news(request):
     """
