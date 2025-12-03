@@ -28,6 +28,7 @@ def login_mobile(request):
             return JsonResponse(
                 {
                     "username": user.username,
+                    "is_admin": getattr(user, "is_admin", False),
                     "status": True,
                     "message": "Login successful!",
                 },
