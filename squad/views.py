@@ -10,8 +10,7 @@ from django.shortcuts import render, get_object_or_404
 from .models import Player, POS_CHOICES
 from django.contrib.auth.decorators import login_required
 
-# kalau kamu punya ModelForm:
-# from .forms import PlayerForm
+
 
 ALLOWED_POS = {c[0] for c in POS_CHOICES if c[0]}
 
@@ -186,3 +185,51 @@ def player_edit(request, pk):
     moved = (old_role != p.role_tag)
     card_html = render_to_string("squad/_player_card.html", {"p": p}, request=request)
     return JsonResponse({"id": p.id, "role_tag": p.role_tag, "html": card_html, "moved": moved})
+
+@require_http_methods(["GET"])
+def api_players(request):
+    players = Player.objects.all().order_by("name")
+
+    data = []
+    for p in players:
+        data.append({
+            "id": p.id,
+            "name": p.name,
+            "fname": p.fname,
+            "lname": p.lname,
+            "photo_url": p.photo_url,
+            "birth_date": p.birth_date.isoformat() if p.birth_date else None,
+            "age": p.age,
+            "club": p.club,
+            "height_cm": p.height_cm,
+
+            "positions": p.positions_list,
+            "positions_display": p.positions_display,
+            "role_tag": p.role_tag,
+
+            "caps": p.caps,
+            "goals": p.goals,
+            "assists": p.assists,
+        })
+
+    return JsonResponse(data, safe=False)
+
+@require_http_methods(["GET"])
+def api_player_detail(request, pk):
+    p = get_object_or_404(Player, pk=pk)
+
+    data = {
+        "id": p.id,
+        "name": p.name,
+        "photo_url": p.photo_url,
+        "age": p.age,
+        "club": p.club,
+        "height_cm": p.height_cm,
+        "positions": p.positions_list,
+        "role_tag": p.role_tag,
+        "caps": p.caps,
+        "goals": p.goals,
+        "assists": p.assists,
+    }
+    return JsonResponse(data)
+

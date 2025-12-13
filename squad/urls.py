@@ -10,4 +10,8 @@ urlpatterns = [
     path("player/<int:pk>/", views.player_detail, name="player_detail"),
     path("player/form/", views.player_form, name="player_form"),
     path("player/<int:pk>/delete/", views.player_delete, name="player_delete"),
+    path("api/players/", views.api_players, name="api_players"),
+    path("api/players/<int:pk>/", views.api_player_detail),
+
+
 ]
