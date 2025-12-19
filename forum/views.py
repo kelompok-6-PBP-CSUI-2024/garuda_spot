@@ -11,6 +11,9 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Comment 
 from .models import Post
+import json
+from django.views.decorators.http import require_GET
+from django.views.decorators.csrf import csrf_exempt
 
 def ensure_default_categories():
     if not Category.objects.exists():
@@ -179,3 +182,142 @@ def delete_post(request, slug):
         return HttpResponseForbidden("Anda tidak punya izin untuk menghapus post ini.")
     post.delete()
     return redirect("forum:post_list")
+
+
+def serialize_post(post):
+    """
+    Ubah 1 objek Post jadi dict JSON untuk dipakai Flutter.
+    Berdasarkan models.Post di models.py.
+    """
+    # tanggal
+    created = post.created_at
+    if created is not None:
+        created_local = timezone.localtime(created)
+        date_str = created_local.strftime("%A, %d %B %Y • %H:%M")
+    else:
+        date_str = ""
+
+    # kategori
+    category_name = post.category.name if post.category_id else ""
+
+    # author_name langsung dari field model
+    author_name = post.author_name or ""
+
+    return {
+        "id": post.pk,
+        "slug": post.slug,
+        "title": post.title,
+        "content": post.body,          # pakai body sebagai isi
+        "category": category_name,
+        "author": author_name,
+        "date": date_str,
+        "like_count": post.like_count,
+    }
+
+
+
+
+@require_GET
+def api_post_detail(request, slug):
+    """
+    GET /forum/api/posts/<slug>/
+    Mengembalikan detail 1 post + daftar komentar.
+    """
+    post = get_object_or_404(
+        Post.objects.select_related("category"),
+        slug=slug,
+        status=Post.PUBLISHED,
+    )
+
+    post_data = serialize_post(post)
+
+    comments_qs = post.comments.all().order_by("created_at")
+    comments_data = []
+    for c in comments_qs:
+        created = c.created_at
+        if created is not None:
+            created_local = timezone.localtime(created)
+            time_str = created_local.strftime("%d %b %Y %H:%M")
+        else:
+            time_str = ""
+
+        comments_data.append(
+            {
+                "id": c.pk,
+                "author": c.author_name,
+                "content": c.body,
+                "time": time_str,
+            }
+        )
+
+    return JsonResponse(
+        {
+            "post": post_data,
+            "comments": comments_data,
+        }
+    )
+
+
+@csrf_exempt  # untuk awal, biar gampang dites dari Flutter / Postman
+def api_posts(request):
+    """
+    GET  /forum/api/posts/   -> list semua post (PUBLISHED)
+    POST /forum/api/posts/   -> buat post baru dari Flutter
+    """
+    # GET: kirim list
+    if request.method == "GET":
+        ensure_default_categories()
+
+        qs = (
+            Post.objects
+            .select_related("category")
+            .filter(status=Post.PUBLISHED)
+            .order_by("-created_at")
+        )
+
+        data = [serialize_post(p) for p in qs]
+        return JsonResponse({"results": data})
+
+    # POST: buat post baru
+    if request.method == "POST":
+        try:
+            body = json.loads(request.body.decode("utf-8"))
+        except json.JSONDecodeError:
+            return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+        title = (body.get("title") or "").strip()
+        content = (body.get("content") or "").strip()
+        category_name = (body.get("category") or "").strip()
+        author_name = (body.get("author_name") or body.get("username") or "").strip()
+
+        if not title or not content:
+            return JsonResponse(
+                {"error": "Title dan content wajib diisi"},
+                status=400
+            )
+
+        # Pastikan kategori default ada
+        ensure_default_categories()
+
+        category = None
+        if category_name:
+            category = Category.objects.filter(name__iexact=category_name).first()
+        if category is None:
+            # fallback ke "News" kalau kategori dari Flutter tidak cocok
+            category = Category.objects.filter(name__iexact="News").first()
+
+        if not author_name:
+            author_name = "Orang"
+
+        post = Post.objects.create(
+            title=title,
+            body=content,
+            category=category,
+            author_name=author_name,
+            status=Post.PUBLISHED,
+        )
+
+        return JsonResponse(serialize_post(post), status=201)
+
+    # method lain: tolak
+    return JsonResponse({"error": "Method not allowed"}, status=405)

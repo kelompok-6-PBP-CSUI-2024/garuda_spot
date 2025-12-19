@@ -43,9 +43,7 @@
 {% endblock meta %}
 
 
-{# 
-  BLOCK INI BERISI SEMUA KONTEN HALAMAN ANDA 
-#}
+
 {% block content %}
 <div id="forum-wrapper" class="font-sans h-full" data-initial-page="{% if page_obj %}{{ page_obj.number }}{% else %}1{% endif %}" data-has-next="{% if page_obj and page_obj.has_next %}true{% else %}false{% endif %}">
   
@@ -122,9 +120,7 @@
 </div> 
 {% endblock content %}
 
-{# 
-  BLOCK INI MENAMBAHKAN JAVASCRIPT KE HALAMAN
-#}
+
 {% block body_end %}
 <script>
 (function(){
