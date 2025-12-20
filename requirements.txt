@@ -4,7 +4,7 @@ charset-normalizer==3.4.4
 Django==5.2.7
 django-allauth==65.12.1
 idna==3.11
-oauthlib==3.3.1python3.11 -m venv env
+oauthlib==3.3.1
 python-dotenv==1.1.1
 requests==2.32.5
 requests-oauthlib==2.0.0
