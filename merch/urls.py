@@ -1,7 +1,7 @@
 from django.urls import path
 from .views import (
     show_merch, create_merch, update_merch, detail, delete_merch,
-    show_json, show_json_by_id,
+    show_json, show_json_by_id, update_merch_api, delete_merch_api,
 )
 
 app_name = "merch"
@@ -15,4 +15,6 @@ urlpatterns = [
 
     path("json/", show_json, name="show_json"),
     path("json/<int:id>/", show_json_by_id, name="show_json_by_id"),
+    path("api/update/<int:id>/", update_merch_api, name="update_merch_api"),
+    path("api/delete/<int:id>/", delete_merch_api, name="delete_merch_api"),
 ]

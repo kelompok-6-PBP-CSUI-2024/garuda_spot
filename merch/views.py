@@ -2,7 +2,7 @@ from django.shortcuts import render, get_object_or_404
 from merch.models import Merch
 from django.http import HttpResponse, JsonResponse, HttpResponseBadRequest, HttpResponseNotAllowed
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.csrf import ensure_csrf_cookie, csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.html import strip_tags
 from django.db.models import F
@@ -170,6 +170,7 @@ def show_json(request):
             'thumbnail': merch.thumbnail,
             'category': merch.category,
             'link': merch.link,
+            'view_count': merch.view_count,
         }
         for merch in list_merch
     ]
@@ -188,8 +189,70 @@ def show_json_by_id(request, product_id):
             'thumbnail': merch.thumbnail,
             'category': merch.category,
             'link': merch.link,
+            'view_count': merch.view_count,
             'user_username': merch.user.username if merch.user_id else None,
         }
         return JsonResponse(data)
     except Merch.DoesNotExist:
         return JsonResponse({'detail': 'Not found'}, status=404)
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST", "PUT", "PATCH"])
+def update_merch_api(request, id):
+    try:
+        merch = Merch.objects.get(pk=id)
+    except Merch.DoesNotExist:
+        return JsonResponse({"detail": "Not found"}, status=404)
+
+    if "name" in request.POST:
+        merch.name = strip_tags(request.POST.get("name", merch.name)).strip()
+    if "vendor" in request.POST:
+        merch.vendor = strip_tags(request.POST.get("vendor", merch.vendor)).strip()
+    if "description" in request.POST:
+        merch.description = strip_tags(request.POST.get("description", merch.description)).strip()
+    if "thumbnail" in request.POST:
+        merch.thumbnail = (request.POST.get("thumbnail") or merch.thumbnail).strip()
+    if "link" in request.POST:
+        merch.link = (request.POST.get("link") or merch.link).strip()
+
+    if "price" in request.POST:
+        new_price = to_int(request.POST.get("price"), merch.price)
+        if new_price is not None:
+            merch.price = new_price
+    if "stock" in request.POST:
+        new_stock = to_int(request.POST.get("stock"), merch.stock)
+        if new_stock is not None:
+            merch.stock = new_stock
+
+    if "category" in request.POST:
+        cat = (request.POST.get("category") or merch.category).strip().lower()
+        if cat in ALLOWED_CATEGORIES:
+            merch.category = cat
+
+    merch.save()
+
+    data = {
+        "id": merch.id,
+        "name": merch.name,
+        "vendor": merch.vendor,
+        "price": merch.price,
+        "stock": merch.stock,
+        "description": merch.description,
+        "thumbnail": merch.thumbnail,
+        "category": merch.category,
+        "link": merch.link,
+        "view_count": merch.view_count,
+    }
+    return JsonResponse(data)
+
+@csrf_exempt
+@login_required
+@require_http_methods(["POST", "DELETE"])
+def delete_merch_api(request, id):
+    if not getattr(request.user, "is_admin", False):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+
+    merch = get_object_or_404(Merch, pk=id)
+    merch.delete()
+    return JsonResponse({"deleted": id}, status=200)
