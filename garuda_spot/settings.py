@@ -32,7 +32,7 @@ PRODUCTION = os.getenv('PRODUCTION', 'False').lower() == 'true'
 DEBUG = True
 
 # temporary fixes
-ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"]
+ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id", "10.0.2.2"]
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"
@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     'allauth.socialaccount',
     'allauth.socialaccount.providers.google',
 
+    'corsheaders',
     'news',
     'merch',
     'accounts',
@@ -101,6 +102,7 @@ MIDDLEWARE = [
     'allauth.account.middleware.AccountMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
 ]
 
 
@@ -213,9 +215,3 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https" if PRODUCTION else "http"
 SOCIALACCOUNT_LOGIN_ON_GET = True
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-
-CORS_ALLOW_ALL_ORIGINS = not PRODUCTION
-CORS_ALLOWED_ORIGINS = [
-    "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id",
-]
-CORS_ALLOW_CREDENTIALS = True

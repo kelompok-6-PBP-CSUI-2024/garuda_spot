@@ -1,6 +1,4 @@
-{# forum/templates/forum/_post_card.html #}
-{% load static %}
-  <a href="{% url 'forum:post_detail' p.slug %}" >
+<a href="{% url 'forum:post_detail' p.slug %}" >
 <div class="card" data-slug="{{ p.slug }}">
   <div class="meta">
     <span>{{ p.author_name|default:"Orang" }}</span>

@@ -16,6 +16,7 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
+from garuda_spot.views import proxy_image
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -27,4 +28,5 @@ urlpatterns = [
     path("tickets/", include("ticket.urls", namespace="tickets")),
     path("forum/", include("forum.urls", namespace="forum")),
     path("schedule/", include("schedule.urls", namespace="schedule")),
+    path("proxy-image/", proxy_image, name="proxy_image"),
 ]

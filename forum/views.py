@@ -1,4 +1,3 @@
-# forum/views.py
 from django.core.paginator import Paginator, EmptyPage
 from django.http import JsonResponse, Http404, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
@@ -10,8 +9,9 @@ from .models import Post, Category
 from .forms import PostFilterForm, PostForm, CommentForm
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from .models import Comment 
+from .models import Post
 
-# FUNGSI UNTUK MEMBUAT KATEGORI DEFAULT (JIKA BELUM ADA)
 def ensure_default_categories():
     if not Category.objects.exists():
         Category.objects.bulk_create([
@@ -22,7 +22,6 @@ def ensure_default_categories():
             Category(name="Match", slug="match"),
         ])
 
-# FUNGSI INTERNAL UNTUK MENGAMBIL POSTS
 @login_required
 def _get_posts_context(request):
     form = PostFilterForm(request.GET or None)
@@ -44,13 +43,10 @@ def _get_posts_context(request):
             Q(excerpt__icontains=q)
         )
 
-    paginator = Paginator(qs, 6) # 6 post per halaman
+    paginator = Paginator(qs, 6)
     page = request.GET.get("page", 1)
-    
-    # === PERBAIKAN: Try/Except dipindah ke view ===
-    # Biarkan view yang memanggil menangani EmptyPage
-    page_obj = paginator.get_page(page) # Menggunakan get_page untuk keamanan
 
+    page_obj = paginator.get_page(page) 
     return {
         "posts": page_obj.object_list,
         "page_obj": page_obj,
@@ -58,11 +54,9 @@ def _get_posts_context(request):
         "liked_ids": set(request.session.get("liked_posts", [])), 
     }
 
-# VIEW UNTUK HALAMAN UTAMA (FULL LOAD)
-# === PERBAIKAN: FUNGSI DUPLIKAT TELAH DIHAPUS ===
 @login_required
 def post_list(request):
-    ensure_default_categories()  # Pastikan kategori ada
+    ensure_default_categories()
     categories = Category.objects.all()
     base_ctx = {
         "categories": categories,
@@ -75,24 +69,20 @@ def post_list(request):
     try:
         base_ctx.update(_get_posts_context(request))
     except EmptyPage:
-        # Jika halaman pertama kosong (tidak ada post sama sekali)
         base_ctx.update({
             "posts": [],
-            "page_obj": None, # Tidak ada page_obj
+            "page_obj": None,
         })
         
     return render(request, "forum/post_list.html", base_ctx)
 
-# VIEW UNTUK AJAX (LOAD MORE, FILTER, SEARCH)
 @login_required
 def post_list_partial(request):
     try:
         ctx = _get_posts_context(request)
     except EmptyPage:
-        # Jika tidak ada halaman lagi
         return JsonResponse({"html": "", "has_next": False})
 
-    # === PERBAIKAN: Render _post_card.html di dalam loop Python ===
     html_list = []
     for post in ctx.get("posts", []):
         html_list.append(
@@ -109,19 +99,17 @@ def post_list_partial(request):
         "has_next": ctx["page_obj"].has_next()
     })
 
-# VIEW UNTUK MEMBUAT POST BARU (VIA AJAX)
 @login_required
 @require_POST
 def post_create(request):
     form = PostForm(request.POST)
     if form.is_valid():
         post = form.save()
-        # Me-render satu card, ini sudah benar
         card_html = render_to_string("forum/_post_card.html", {"p": post}, request=request)
         return JsonResponse({"ok": True, "html": card_html})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
-# VIEW UNTUK HALAMAN DETAIL POST
+
 @login_required
 def post_detail(request, slug):
     post = get_object_or_404(Post.objects.select_related("category"), slug=slug, status=Post.PUBLISHED)
@@ -135,7 +123,6 @@ def post_detail(request, slug):
         "active_category": post.category.slug
     })
 
-# VIEW UNTUK MEMBUAT KOMENTAR BARU (VIA AJAX)
 @login_required
 @require_POST
 def comment_create(request, slug):
@@ -149,7 +136,6 @@ def comment_create(request, slug):
         return JsonResponse({"ok": True, "html": html})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
-# VIEW UNTUK LIKE/UNLIKE POST (VIA AJAX)
 @login_required
 @require_POST
 def post_like(request, slug):
@@ -173,27 +159,23 @@ def post_like(request, slug):
     
     return JsonResponse({"ok": True, "liked": liked, "like_count": post.like_count})
 
-# VIEW UNTUK HAPUS POST (AJAX / NON-AJAX)
 @login_required
-@require_POST
-def post_delete(request, slug):
-    if not request.user.is_staff:
-        if request.headers.get("x-requested-with") == "XMLHttpRequest":
-            return JsonResponse({"ok": False, "error": "forbidden"}, status=403)
-        return HttpResponseForbidden("Forbidden")
+def delete_comment(request, comment_id):
+    if request.method != "POST":
+        return HttpResponseForbidden("Invalid request method.")
+    comment = get_object_or_404(Comment, id=comment_id)
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Anda tidak punya izin untuk menghapus komentar ini.")
+    post_slug = comment.post.slug
+    comment.delete()
+    return redirect("forum:post_detail", slug=post_slug)
 
+@login_required
+def delete_post(request, slug):
+    if request.method != "POST":
+        return HttpResponseForbidden("Invalid request")
     post = get_object_or_404(Post, slug=slug)
-    
-    liked_posts = request.session.get("liked_posts", [])
-    if isinstance(liked_posts, list) and post.id in liked_posts:
-        liked_posts.remove(post.id)
-        request.session["liked_posts"] = liked_posts
-        request.session.modified = True
-
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Anda tidak punya izin untuk menghapus post ini.")
     post.delete()
-
-    if request.headers.get("x-requested-with") == "XMLHttpRequest":
-        return JsonResponse({"ok": True})
-
-    messages.success(request, "Post berhasil dihapus.")
     return redirect("forum:post_list")
