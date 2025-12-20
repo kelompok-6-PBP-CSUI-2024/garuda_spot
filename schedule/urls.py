@@ -10,6 +10,10 @@ urlpatterns = [
 
     path("match/<uuid:match_id>/", views.show_match, name="show_match"),
 
+    # JSON feeds (alias for mobile)
+    path("api/match/", views.show_json, name="api_match_list"),
+    path("api/match/<uuid:id>/", views.show_json_by_id, name="api_match_detail"),
+
     # URL non-AJAX (Biarkan Saja)
     path('edit/<uuid:id>/', views.edit_match, name='edit_match'),
     path('delete/<uuid:id>/', views.delete_match, name='delete_match'),

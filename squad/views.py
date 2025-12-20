@@ -15,6 +15,30 @@ from django.contrib.auth.decorators import login_required
 
 ALLOWED_POS = {c[0] for c in POS_CHOICES if c[0]}
 
+
+@require_http_methods(["GET"])
+def api_players(request):
+    players = Player.objects.all().order_by("id")
+    data = [
+        {
+            "id": p.id,
+            "name": p.name,
+            "photo_url": p.photo_url or "",
+            "birth_date": p.birth_date.isoformat() if p.birth_date else None,
+            "club": p.club,
+            "height_cm": p.height_cm,
+            "position1": p.position1,
+            "position2": p.position2,
+            "position3": p.position3,
+            "caps": p.caps,
+            "goals": p.goals,
+            "assists": p.assists,
+            "role_tag": p.role_tag,
+        }
+        for p in players
+    ]
+    return JsonResponse(data, safe=False)
+
 def index(request):
     players = Player.objects.all().order_by('created_at', 'name')
     return render(request, "squad/index.html", {"players": players})
