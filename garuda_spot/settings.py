@@ -36,6 +36,8 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garudaspot.pbp.cs.ui
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"
+    "http://localhost:*",
+
 ]
 
 SITE_ID=1
