@@ -5,7 +5,7 @@ from django.http import (
 from django.core import serializers
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.utils.html import strip_tags
 from django.contrib.auth.decorators import login_required
 
@@ -196,6 +196,158 @@ def add_news_entry_ajax(request):
             "category": n.category,
             "publish_date": n.publish_date,
             "content": n.content,
+        },
+        status=201,
+    )
+
+@csrf_exempt
+@require_POST
+def add_news_mobile(request):
+    """
+    CSRF-exempt create endpoint for mobile/web clients.
+    Accepts form or JSON body with title, category, publish_date (optional), content.
+    """
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+
+    title = strip_tags(request.POST.get("title", "")).strip()
+    category = strip_tags(request.POST.get("category", "")).strip()
+    publish_date = strip_tags(request.POST.get("publish_date", "")).strip()
+    content = strip_tags(request.POST.get("content", ""))
+
+    if request.content_type == "application/json" and (not title and not category and not content):
+        import json
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+        title = strip_tags(data.get("title", "")).strip()
+        category = strip_tags(data.get("category", "")).strip()
+        publish_date = strip_tags(data.get("publish_date", "")).strip()
+        content = strip_tags(data.get("content", ""))
+
+    if not (title and category and content):
+        return JsonResponse({"error": "title, category, content are required"}, status=400)
+
+    n = News.objects.create(
+        title=title,
+        category=category,
+        publish_date=publish_date,
+        published_month=_extract_month(publish_date),
+        content=content,
+    )
+    return JsonResponse(
+        {
+            "id": str(n.id),
+            "title": n.title,
+            "category": n.category,
+            "publish_date": n.publish_date,
+            "content": n.content,
+        },
+        status=201,
+    )
+
+
+@csrf_exempt
+@require_POST
+def delete_news_mobile(request, id):
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+    obj = get_object_or_404(News, pk=id)
+    obj.delete()
+    return JsonResponse({"deleted": str(id)})
+
+@csrf_exempt
+@require_POST
+def add_news_mobile(request):
+    """
+    CSRF-exempt create endpoint for mobile/web clients.
+    Accepts form or JSON body with title, category, publish_date (optional), content.
+    """
+    title = strip_tags(request.POST.get("title", "")).strip() if request.POST else ""
+    category = strip_tags(request.POST.get("category", "")).strip() if request.POST else ""
+    publish_date = strip_tags(request.POST.get("publish_date", "")).strip() if request.POST else ""
+    content = strip_tags(request.POST.get("content", "")) if request.POST else ""
+
+    if request.content_type == "application/json" and (not title and not category and not content):
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+        title = strip_tags(data.get("title", "")).strip()
+        category = strip_tags(data.get("category", "")).strip()
+        publish_date = strip_tags(data.get("publish_date", "")).strip()
+        content = strip_tags(data.get("content", ""))
+
+    if not (title and category and content):
+        return JsonResponse({"error": "title, category, content are required"}, status=400)
+
+    n = News.objects.create(
+        title=title,
+        category=category,
+        publish_date=publish_date,
+        published_month=_extract_month(publish_date),
+        content=content,
+    )
+    return JsonResponse(
+        {
+            "id": str(n.id),
+            "title": n.title,
+            "category": n.category,
+            "publish_date": n.publish_date,
+            "content": n.content,
+        },
+        status=201,
+    )
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_news(request):
+    """
+    Combined endpoint for mobile:
+      - GET: same payload as show_json (supports month, sort, page, page_size)
+      - POST: admin only, create news (title, category, content, optional publish_date)
+    """
+    if request.method == "GET":
+        return show_json(request)
+
+    # POST path: create news (admin only)
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+
+    # Accept form-encoded or JSON body
+    if request.content_type == "application/json":
+        import json
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+    else:
+        data = request.POST
+
+    title = strip_tags(data.get("title", "")).strip()
+    category = strip_tags(data.get("category", "")).strip()
+    publish_date = strip_tags(data.get("publish_date", "")).strip()
+    content = strip_tags(data.get("content", ""))
+
+    if not (title and category and content):
+        return JsonResponse({"error": "title, category, content are required"}, status=400)
+
+    n = News.objects.create(
+        title=title,
+        category=category,
+        publish_date=publish_date,
+        published_month=_extract_month(publish_date),
+        content=content,
+    )
+    return JsonResponse(
+        {
+            "id": str(n.id),
+            "title": n.title,
+            "category": n.category,
+            "publish_date": n.publish_date,
+            "content": n.content,
+            "published_month": n.published_month,
         },
         status=201,
     )
