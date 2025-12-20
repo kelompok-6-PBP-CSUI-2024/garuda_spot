@@ -51,6 +51,8 @@ INSTALLED_APPS = [
     'django.contrib.humanize',
     'django.contrib.sites',
 
+    'corsheaders',
+
     'allauth',
     'allauth.account',
     'allauth.socialaccount',
@@ -91,6 +93,7 @@ LOGOUT_REDIRECT_URL = 'news:show_main'
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -210,3 +213,9 @@ ACCOUNT_DEFAULT_HTTP_PROTOCOL = "https" if PRODUCTION else "http"
 SOCIALACCOUNT_LOGIN_ON_GET = True
 USE_X_FORWARDED_HOST = True
 SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+CORS_ALLOW_ALL_ORIGINS = not PRODUCTION
+CORS_ALLOWED_ORIGINS = [
+    "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id",
+]
+CORS_ALLOW_CREDENTIALS = True
