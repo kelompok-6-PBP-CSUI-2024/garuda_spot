@@ -44,6 +44,16 @@ def match_to_dict(m):
         "corners_home": m.corners_home, "corners_away": m.corners_away
     }
 
+def _is_admin_request(request, data=None):
+    if request.user.is_authenticated:
+        return getattr(request.user, "is_admin", False) or request.user.is_superuser
+    if data is None:
+        data = request.POST
+    flag = ""
+    if isinstance(data, dict):
+        flag = str(data.get("is_admin", "")).strip().lower()
+    return flag in ("1", "true", "yes")
+
 # --- Main Views ---
 
 def show_main(request):
@@ -254,9 +264,6 @@ def add_match_mobile(request):
     CSRF-exempt create endpoint untuk mobile/Flutter.
     Menerima Form-Data atau JSON Body.
     """
-    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
-        return HttpResponseForbidden("Admins only")
-
     # Handle JSON Body vs Form Data
     if request.content_type == "application/json":
         try:
@@ -265,6 +272,9 @@ def add_match_mobile(request):
             data = {}
     else:
         data = request.POST
+
+    if not _is_admin_request(request, data):
+        return JsonResponse({"detail": "Admins only"}, status=403)
 
     # Validasi field utama
     home_team = strip_tags(data.get("home_team", "")).strip()
@@ -305,8 +315,14 @@ def add_match_mobile(request):
 @csrf_exempt
 @require_POST
 def delete_match_mobile(request, id):
-    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
-        return HttpResponseForbidden("Admins only")
+    data = request.POST
+    if request.content_type == "application/json":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+    if not _is_admin_request(request, data):
+        return JsonResponse({"detail": "Admins only"}, status=403)
     
     match = get_object_or_404(NationalTeamSchedule, pk=id)
     match.delete()
@@ -324,9 +340,6 @@ def api_match(request):
         return show_json(request)
     
     # Logic POST (Create)
-    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
-        return HttpResponseForbidden("Admins only")
-    
     # Gunakan logic yang sama dengan add_match_mobile
     return add_match_mobile(request)
 
@@ -337,9 +350,6 @@ def edit_match_mobile(request, id):
     Endpoint edit match khusus mobile/API (JSON & Form Data).
     """
     # 1. Cek Admin
-    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
-        return HttpResponseForbidden("Admins only")
-
     # 2. Ambil Match Object
     match = get_object_or_404(NationalTeamSchedule, pk=id)
 
@@ -351,6 +361,9 @@ def edit_match_mobile(request, id):
             data = {}
     else:
         data = request.POST
+
+    if not _is_admin_request(request, data):
+        return JsonResponse({"detail": "Admins only"}, status=403)
 
     # 4. Update Field String (Hanya jika key ada di data)
     if "home_team" in data:

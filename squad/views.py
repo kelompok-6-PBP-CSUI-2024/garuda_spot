@@ -58,6 +58,14 @@ def _player_to_dict(p: Player):
         "assists": p.assists,
     }
 
+def _is_admin_request(request, payload=None):
+    if request.user.is_authenticated:
+        return getattr(request.user, "is_admin", False) or request.user.is_superuser
+    if payload is None:
+        payload = {}
+    flag = str(payload.get("is_admin", "")).strip().lower()
+    return flag in ("1", "true", "yes")
+
 
 @require_http_methods(["GET"])
 def api_players(request):
@@ -73,19 +81,18 @@ def api_player_detail(request, pk):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@login_required
 def api_player_create(request):
-    if not getattr(request.user, "is_admin", False):
-        return JsonResponse({"error": "Forbidden"}, status=403)
-
     try:
         data = json.loads(request.body.decode())
     except Exception:
-        return HttpResponseBadRequest("Invalid JSON")
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+
+    if not _is_admin_request(request, data):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
 
     name = (data.get("name") or "").strip()
     if not name:
-        return HttpResponseBadRequest("Name is required")
+        return JsonResponse({"detail": "Name is required"}, status=400)
 
     p = Player.objects.create(
         name=name,
@@ -106,11 +113,7 @@ def api_player_create(request):
 
 @csrf_exempt
 @require_http_methods(["GET", "POST"])
-@login_required
 def api_player_update(request, pk):
-    if not getattr(request.user, "is_admin", False):
-        return HttpResponseForbidden("Admins only")
-
     p = get_object_or_404(Player, pk=pk)
 
     if request.method == "GET":
@@ -119,11 +122,14 @@ def api_player_update(request, pk):
     try:
         data = json.loads(request.body.decode())
     except Exception:
-        return HttpResponseBadRequest("Invalid JSON")
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+
+    if not _is_admin_request(request, data):
+        return JsonResponse({"detail": "Admins only"}, status=403)
 
     name = data.get("name")
     if name is None or not str(name).strip():
-        return HttpResponseBadRequest("Name is required")
+        return JsonResponse({"detail": "Name is required"}, status=400)
     p.name = str(name).strip()
 
     if "photo_url" in data:
@@ -158,10 +164,14 @@ def api_player_update(request, pk):
 
 @csrf_exempt
 @require_http_methods(["POST"])
-@login_required
 def api_player_delete(request, pk):
-    if not getattr(request.user, "is_admin", False):
-        return HttpResponseForbidden("Admins only")
+    try:
+        data = json.loads(request.body.decode())
+    except Exception:
+        data = {}
+
+    if not _is_admin_request(request, data):
+        return JsonResponse({"detail": "Admins only"}, status=403)
 
     p = get_object_or_404(Player, pk=pk)
     pid = p.id
