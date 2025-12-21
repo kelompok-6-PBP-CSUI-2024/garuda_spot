@@ -1,7 +1,6 @@
 from django.db import models
 from datetime import date
 
-# ==== pilihan posisi ====
 POS_CHOICES = [
     ("", "—"),  # boleh kosong
     ("GK","GK"), ("LWB","LWB"), ("LB","LB"), ("CB","CB"), ("RB","RB"), ("RWB","RWB"),
@@ -16,12 +15,10 @@ class Player(models.Model):
     club = models.CharField(max_length=100, blank=True)
     height_cm = models.PositiveIntegerField(null=True, blank=True)
 
-    # ==== NEW: tiga posisi ====
     position1 = models.CharField(max_length=4, choices=POS_CHOICES, blank=True, default="")
     position2 = models.CharField(max_length=4, choices=POS_CHOICES, blank=True, default="")
     position3 = models.CharField(max_length=4, choices=POS_CHOICES, blank=True, default="")
 
-    # statistik
     caps = models.PositiveIntegerField(default=0)
     goals = models.PositiveIntegerField(default=0)
     assists = models.PositiveIntegerField(default=0)
@@ -44,7 +41,6 @@ class Player(models.Model):
         parts = (self.name or "").split()
         return " ".join(parts[1:]) if len(parts) > 1 else ""
 
-    # gabungkan posisi untuk tampilan overlay
     @property
     def positions_list(self):
         return [p for p in [self.position1, self.position2, self.position3] if p]
@@ -53,7 +49,6 @@ class Player(models.Model):
     def positions_display(self):
         return ", ".join(self.positions_list) if self.positions_list else ""
 
-    # role untuk filter → ikut Position 1
     @property
     def role_tag(self):
         p = (self.position1 or "").upper()

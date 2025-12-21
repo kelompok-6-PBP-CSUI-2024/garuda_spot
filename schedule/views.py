@@ -1,5 +1,3 @@
-# views.py (FINAL DAN KOREKSI)
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import (
     HttpResponse, HttpResponseRedirect, JsonResponse, HttpResponseForbidden, HttpResponseBadRequest
@@ -7,33 +5,55 @@ from django.http import (
 from django.core import serializers
 from django.urls import reverse
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_http_methods, require_POST
+from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.utils.html import strip_tags
 from django.contrib.auth.decorators import login_required
+from django.core.paginator import Paginator
 
 from .models import NationalTeamSchedule
 from .forms import NationalTeamScheduleForm
-import uuid # Diperlukan karena Anda menggunakan UUID
+import json
+import uuid 
 
-# --- Helper Function (Dipertahankan) ---
-# Tidak ada perubahan pada helper Anda, kecuali penamaan agar tidak konflik.
-# Asumsikan helper to_int ada di bagian atas views.py
-# def to_int(val, default=0): ...
+# --- Helper untuk mapping data ke Dictionary ---
+def match_to_dict(m):
+    return {
+        "id": str(m.id), 
+        "home_team": m.home_team, 
+        "away_team": m.away_team,
+        "match_date": m.match_date, 
+        "location": m.location, 
+        "category": m.category,
+        "home_score": m.home_score, 
+        "away_score": m.away_score,
+        "home_code": m.home_code, 
+        "away_code": m.away_code, 
+        "category_image_url": m.category_image_url,
+        "lineup": m.lineup, 
+        "review": m.review,
+        # Stats
+        "shots_home": m.shots_home, "shots_away": m.shots_away,
+        "shots_on_target_home": m.shots_on_target_home, "shots_on_target_away": m.shots_on_target_away,
+        "possession_home": m.possession_home, "possession_away": m.possession_away,
+        "passes_home": m.passes_home, "passes_away": m.passes_away,
+        "pass_accuracy_home": m.pass_accuracy_home, "pass_accuracy_away": m.pass_accuracy_away,
+        "fouls_home": m.fouls_home, "fouls_away": m.fouls_away,
+        "yellow_cards_home": m.yellow_cards_home, "yellow_cards_away": m.yellow_cards_away,
+        "red_cards_home": m.red_cards_home, "red_cards_away": m.red_cards_away,
+        "offsides_home": m.offsides_home, "offsides_away": m.offsides_away,
+        "corners_home": m.corners_home, "corners_away": m.corners_away
+    }
 
-# --- FUNGSI UTAMA NON-AJAX ---
+# --- Main Views ---
 
 def show_main(request):
     categories = [c[0] for c in NationalTeamSchedule._meta.get_field("category").choices]
-    context = {
-        "categories": categories,
-    }
-    return render(request, "schedule.html", context)
-
+    return render(request, "schedule.html", {"categories": categories})
 
 def show_match(request, match_id):
     match = get_object_or_404(NationalTeamSchedule, pk=match_id)
     
-    # Statistik dasar (nilai mentah)
+    # Logic statistik untuk template
     raw_stats = [
         ("Shots", match.shots_home, match.shots_away),
         ("Shots on Target", match.shots_on_target_home, match.shots_on_target_away),
@@ -48,9 +68,7 @@ def show_match(request, match_id):
     ]
 
     stats_for_template = []
-    
     for stat_name, home_val, away_val in raw_stats:
-        # Mengkonversi ke integer, default ke 0 jika None
         home = int(home_val) if home_val is not None else 0
         away = int(away_val) if away_val is not None else 0
         total = home + away
@@ -59,11 +77,9 @@ def show_match(request, match_id):
         away_percent = 50
         
         if total > 0:
-            # Hitung persentase di Python (lebih aman)
             home_percent = round((home / total) * 100)
-            away_percent = 100 - home_percent # Pastikan total persentase 100
+            away_percent = 100 - home_percent
 
-        # Kita mengirim dictionary, bukan tuple
         stats_for_template.append({
             "name": stat_name,
             "home_val": home,
@@ -97,74 +113,73 @@ def delete_match(request, id):
     match.delete()
     return HttpResponseRedirect(reverse('schedule:show_main')) 
 
-# --- FUNGSI DATA FEED (JSON/XML) ---
-# ... (show_xml, show_json, show_xml_by_id, show_json_by_id - TIDAK DIUBAH) ...
+# --- Data Feeds & API ---
 
 def show_xml(request):
     xml_data = serializers.serialize("xml", NationalTeamSchedule.objects.all())
     return HttpResponse(xml_data, content_type="application/xml")
 
-def show_json(request):
-    # Ditingkatkan untuk menyertakan semua data yang dibutuhkan frontend Edit modal
-    data = [
-        {
-            "id": str(m.id), "home_team": m.home_team, "away_team": m.away_team,
-            "match_date": m.match_date, "location": m.location, "category": m.category,
-            "home_score": m.home_score, "away_score": m.away_score,
-            "home_code": m.home_code, "away_code": m.away_code, "category_image_url": m.category_image_url,
-            "lineup": m.lineup, "review": m.review,
-            "shots_home": m.shots_home, "shots_away": m.shots_away,
-            "shots_on_target_home": m.shots_on_target_home, "shots_on_target_away": m.shots_on_target_away,
-            "possession_home": m.possession_home, "possession_away": m.possession_away,
-            "passes_home": m.passes_home, "passes_away": m.passes_away,
-            "pass_accuracy_home": m.pass_accuracy_home, "pass_accuracy_away": m.pass_accuracy_away,
-            "fouls_home": m.fouls_home, "fouls_away": m.fouls_away,
-            "yellow_cards_home": m.yellow_cards_home, "yellow_cards_away": m.yellow_cards_away,
-            "red_cards_home": m.red_cards_home, "red_cards_away": m.red_cards_away,
-            "offsides_home": m.offsides_home, "offsides_away": m.offsides_away,
-            "corners_home": m.corners_home, "corners_away": m.corners_away
-        }
-        for m in NationalTeamSchedule.objects.all().order_by('-match_date')
-    ]
-    return JsonResponse(data, safe=False)
-
-def show_xml_by_id(request, match_id):
-    qs = NationalTeamSchedule.objects.filter(pk=match_id)
+def show_xml_by_id(request, id):
+    qs = NationalTeamSchedule.objects.filter(pk=id)
     xml_data = serializers.serialize("xml", qs)
     return HttpResponse(xml_data, content_type="application/xml")
 
-def show_json_by_id(request, match_id):
+@require_GET
+def show_json(request):
+    # Sorting logic similar to news
+    sort_order = (request.GET.get("sort") or "desc").lower()
+    
+    # Asumsi match_date adalah field Date/DateTime yang valid di model
+    if sort_order == "asc":
+        qs = NationalTeamSchedule.objects.all().order_by('match_date')
+    else:
+        qs = NationalTeamSchedule.objects.all().order_by('-match_date')
+
+    # Pagination logic
     try:
-        m = NationalTeamSchedule.objects.get(pk=match_id)
+        page = int(request.GET.get("page", 1))
+    except ValueError:
+        page = 1
+    
+    try:
+        page_size = int(request.GET.get("page_size", 20))
+    except ValueError:
+        page_size = 20
+    page_size = max(1, min(page_size, 100))
+
+    paginator = Paginator(qs, page_size)
+    
+    try:
+        matches_page = paginator.page(page)
+    except Exception:
+        # Jika page tidak valid (misal page 999), return empty list atau page terakhir
+        matches_page = []
+
+    data_items = [match_to_dict(m) for m in matches_page]
+
+    return JsonResponse({
+        "items": data_items,
+        "page": page,
+        "page_size": page_size,
+        "has_next": matches_page.has_next() if hasattr(matches_page, 'has_next') else False,
+        "total": paginator.count,
+    })
+
+def show_json_by_id(request, id):
+    try:
+        m = NationalTeamSchedule.objects.get(pk=id)
     except NationalTeamSchedule.DoesNotExist:
         return JsonResponse({"detail": "Not found"}, status=404)
+    return JsonResponse(match_to_dict(m))
 
-    data = {
-        "id": str(m.id), "home_team": m.home_team, "away_team": m.away_team,
-        "match_date": m.match_date, "location": m.location, "category": m.category,
-        "home_score": m.home_score, "away_score": m.away_score,
-        "home_code": m.home_code, "away_code": m.away_code, "category_image_url": m.category_image_url,
-        "lineup": m.lineup, "review": m.review,
-        "shots_home": m.shots_home, "shots_away": m.shots_away,
-        "shots_on_target_home": m.shots_on_target_home, "shots_on_target_away": m.shots_on_target_away,
-        "possession_home": m.possession_home, "possession_away": m.possession_away,
-        "passes_home": m.passes_home, "passes_away": m.passes_away,
-        "pass_accuracy_home": m.pass_accuracy_home, "pass_accuracy_away": m.pass_accuracy_away,
-        "fouls_home": m.fouls_home, "fouls_away": m.fouls_away,
-        "yellow_cards_home": m.yellow_cards_home, "yellow_cards_away": m.yellow_cards_away,
-        "red_cards_home": m.red_cards_home, "red_cards_away": m.red_cards_away,
-        "offsides_home": m.offsides_home, "offsides_away": m.offsides_away,
-        "corners_home": m.corners_home, "corners_away": m.corners_away
-    }
-    return JsonResponse(data)
+# --- AJAX Web Views (Login Required) ---
 
-# --- FUNGSI CREATE AJAX (VERSI ASLI ANDA) ---
 @csrf_exempt
 @require_POST
 @login_required 
 def create_match_ajax(request):
+    # Logika sama seperti sebelumnya
     data = request.POST
-
     home_team = strip_tags(data.get("home_team", "")).strip()
     away_team = strip_tags(data.get("away_team", "")).strip()
     match_date = strip_tags(data.get("match_date", "")).strip()
@@ -174,97 +189,243 @@ def create_match_ajax(request):
     if not (home_team and away_team and match_date and location and category):
         return HttpResponse(b"INVALID: Missing required fields", status=400)
 
-    fields = {
-        "home_code": strip_tags(data.get("home_code", "")).strip() or None,
-        "away_code": strip_tags(data.get("away_code", "")).strip() or None,
-        "lineup": data.get("lineup") or None,
-        "review": data.get("review") or None,
-        "home_score": data.get("home_score") or None,
-        "away_score": data.get("away_score") or None,
-        "shots_home": data.get("shots_home") or None, "shots_away": data.get("shots_away") or None,
-        "shots_on_target_home": data.get("shots_on_target_home") or None, "shots_on_target_away": data.get("shots_on_target_away") or None,
-        "possession_home": data.get("possession_home") or None, "possession_away": data.get("possession_away") or None,
-        "passes_home": data.get("passes_home") or None, "passes_away": data.get("passes_away") or None,
-        "pass_accuracy_home": data.get("pass_accuracy_home") or None, "pass_accuracy_away": data.get("pass_accuracy_away") or None,
-        "fouls_home": data.get("fouls_home") or None, "fouls_away": data.get("fouls_away") or None,
-        "yellow_cards_home": data.get("yellow_cards_home") or None, "yellow_cards_away": data.get("yellow_cards_away") or None,
-        "red_cards_home": data.get("red_cards_home") or None, "red_cards_away": data.get("red_cards_away") or None,
-        "offsides_home": data.get("offsides_home") or None, "offsides_away": data.get("offsides_away") or None,
-        "corners_home": data.get("corners_home") or None, "corners_away": data.get("corners_away") or None,
-    }
-    
-    try:
-        new_match = NationalTeamSchedule(
-            home_team=home_team,
-            away_team=away_team,
-            match_date=match_date,
-            location=location,
-            category=category,
-            **fields
-        )
-        new_match.save()
-        return HttpResponse(b"CREATED", status=201)
+    # Helper untuk mengambil field opsional agar tidak berulang
+    def get_val(key): return data.get(key) or None
 
+    try:
+        new_match = NationalTeamSchedule.objects.create(
+            home_team=home_team, away_team=away_team, match_date=match_date,
+            location=location, category=category,
+            home_code=strip_tags(data.get("home_code", "")).strip() or None,
+            away_code=strip_tags(data.get("away_code", "")).strip() or None,
+            lineup=get_val("lineup"), review=get_val("review"),
+            home_score=get_val("home_score"), away_score=get_val("away_score"),
+            shots_home=get_val("shots_home"), shots_away=get_val("shots_away"),
+            shots_on_target_home=get_val("shots_on_target_home"), shots_on_target_away=get_val("shots_on_target_away"),
+            possession_home=get_val("possession_home"), possession_away=get_val("possession_away"),
+            passes_home=get_val("passes_home"), passes_away=get_val("passes_away"),
+            pass_accuracy_home=get_val("pass_accuracy_home"), pass_accuracy_away=get_val("pass_accuracy_away"),
+            fouls_home=get_val("fouls_home"), fouls_away=get_val("fouls_away"),
+            yellow_cards_home=get_val("yellow_cards_home"), yellow_cards_away=get_val("yellow_cards_away"),
+            red_cards_home=get_val("red_cards_home"), red_cards_away=get_val("red_cards_away"),
+            offsides_home=get_val("offsides_home"), offsides_away=get_val("offsides_away"),
+            corners_home=get_val("corners_home"), corners_away=get_val("corners_away"),
+        )
+        return HttpResponse(b"CREATED", status=201)
     except Exception as e:
-        import traceback
-        print(traceback.format_exc())
         return HttpResponse(f"Error creating match: {e}".encode(), status=400)
 
-
-# --- FUNGSI UPDATE AJAX (Bergaya Merch, menggunakan form untuk validasi) ---
 @csrf_exempt
 @require_POST
 @login_required 
 def update_match_ajax(request, match_id):
-    if not request.user.is_admin:
+    if not request.user.is_admin: # Asumsi properti is_admin ada
         return HttpResponseForbidden(b"Unauthorized")
 
     match = get_object_or_404(NationalTeamSchedule, pk=match_id)
-    
-    # Menggunakan form untuk memproses dan memvalidasi
     form = NationalTeamScheduleForm(request.POST, instance=match)
 
     if form.is_valid():
         updated_match = form.save()
-        
-        # Kembalikan JSON dengan data yang diupdate (penting untuk frontend)
-        data_response = {
-            "id": str(updated_match.id), 
-            "home_team": updated_match.home_team, 
-            "away_team": updated_match.away_team, 
-            "match_date": updated_match.match_date, 
-            "category": updated_match.category, 
-            "location": updated_match.location,
-            "home_score": updated_match.home_score,
-            "away_score": updated_match.away_score,
-            "home_code": updated_match.home_code,
-            "away_code": updated_match.away_code,
-            "lineup": updated_match.lineup,
-            "review": updated_match.review,
-            # Statistik harus dikirim balik jika form perlu diperbarui di modal
-            "shots_home": updated_match.shots_home, "shots_away": updated_match.shots_away,
-            # ... (semua field statistik) ...
-        }
-        return JsonResponse(data_response, status=200) 
+        return JsonResponse(match_to_dict(updated_match), status=200) 
     else:
-        # Kembalikan error form JSON (seperti Merch update)
         errors = dict(form.errors.items())
         return JsonResponse({'detail': 'Validation failed', 'errors': errors}, status=400)
 
-
-# --- FUNGSI DELETE AJAX (Bergaya Merch) ---
 @csrf_exempt
 @require_POST
 @login_required 
 def delete_match_ajax(request, match_id):
-    if not request.user.is_admin:
+    if not getattr(request.user, "is_admin", False):
         return JsonResponse({"detail": "Forbidden"}, status=403)
-
     try:
         match = get_object_or_404(NationalTeamSchedule, pk=match_id)
+        match.delete()
+        return JsonResponse({"deleted": str(match_id)}, status=200)
     except Exception:
         return JsonResponse({"detail": "Not found"}, status=404)
 
+# --- Mobile / API Views (CSRF Exempt) ---
+
+@csrf_exempt
+@require_POST
+def add_match_mobile(request):
+    """
+    CSRF-exempt create endpoint untuk mobile/Flutter.
+    Menerima Form-Data atau JSON Body.
+    """
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+
+    # Handle JSON Body vs Form Data
+    if request.content_type == "application/json":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+    else:
+        data = request.POST
+
+    # Validasi field utama
+    home_team = strip_tags(data.get("home_team", "")).strip()
+    away_team = strip_tags(data.get("away_team", "")).strip()
+    match_date = strip_tags(data.get("match_date", "")).strip()
+    location = strip_tags(data.get("location", "")).strip()
+    category = strip_tags(data.get("category", "")).strip()
+
+    if not (home_team and away_team and match_date and location and category):
+        return JsonResponse({"error": "Missing required fields (home/away team, date, location, category)"}, status=400)
+
+    # Helper untuk data
+    def get_val(key): return data.get(key) or None
+
+    try:
+        new_match = NationalTeamSchedule.objects.create(
+            home_team=home_team, away_team=away_team, match_date=match_date,
+            location=location, category=category,
+            home_code=strip_tags(data.get("home_code", "")).strip() or None,
+            away_code=strip_tags(data.get("away_code", "")).strip() or None,
+            lineup=get_val("lineup"), review=get_val("review"),
+            home_score=get_val("home_score"), away_score=get_val("away_score"),
+            shots_home=get_val("shots_home"), shots_away=get_val("shots_away"),
+            shots_on_target_home=get_val("shots_on_target_home"), shots_on_target_away=get_val("shots_on_target_away"),
+            possession_home=get_val("possession_home"), possession_away=get_val("possession_away"),
+            passes_home=get_val("passes_home"), passes_away=get_val("passes_away"),
+            pass_accuracy_home=get_val("pass_accuracy_home"), pass_accuracy_away=get_val("pass_accuracy_away"),
+            fouls_home=get_val("fouls_home"), fouls_away=get_val("fouls_away"),
+            yellow_cards_home=get_val("yellow_cards_home"), yellow_cards_away=get_val("yellow_cards_away"),
+            red_cards_home=get_val("red_cards_home"), red_cards_away=get_val("red_cards_away"),
+            offsides_home=get_val("offsides_home"), offsides_away=get_val("offsides_away"),
+            corners_home=get_val("corners_home"), corners_away=get_val("corners_away"),
+        )
+        return JsonResponse(match_to_dict(new_match), status=201)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
+
+@csrf_exempt
+@require_POST
+def delete_match_mobile(request, id):
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+    
+    match = get_object_or_404(NationalTeamSchedule, pk=id)
     match.delete()
-    # Kembalikan status 200 OK dengan ID yang dihapus (seperti Merch delete)
-    return JsonResponse({"deleted": match_id}, status=200)
+    return JsonResponse({"deleted": str(id)})
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+def api_match(request):
+    """
+    Endpoint gabungan untuk Mobile:
+    GET: Return JSON list (via show_json)
+    POST: Create new match (via add_match_mobile logic)
+    """
+    if request.method == "GET":
+        return show_json(request)
+    
+    # Logic POST (Create)
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+    
+    # Gunakan logic yang sama dengan add_match_mobile
+    return add_match_mobile(request)
+
+@csrf_exempt
+@require_POST
+def edit_match_mobile(request, id):
+    """
+    Endpoint edit match khusus mobile/API (JSON & Form Data).
+    """
+    # 1. Cek Admin
+    if not (request.user.is_authenticated and getattr(request.user, "is_admin", False)):
+        return HttpResponseForbidden("Admins only")
+
+    # 2. Ambil Match Object
+    match = get_object_or_404(NationalTeamSchedule, pk=id)
+
+    # 3. Handle JSON Body vs Form Data
+    if request.content_type == "application/json":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+        except Exception:
+            data = {}
+    else:
+        data = request.POST
+
+    # 4. Update Field String (Hanya jika key ada di data)
+    if "home_team" in data:
+        match.home_team = strip_tags(data.get("home_team", match.home_team)).strip()
+    if "away_team" in data:
+        match.away_team = strip_tags(data.get("away_team", match.away_team)).strip()
+    if "match_date" in data:
+        match.match_date = strip_tags(data.get("match_date", match.match_date)).strip()
+    if "location" in data:
+        match.location = strip_tags(data.get("location", match.location)).strip()
+    if "category" in data:
+        match.category = strip_tags(data.get("category", match.category)).strip()
+    
+    # Update Codes (Optional fields)
+    if "home_code" in data:
+        match.home_code = strip_tags(data.get("home_code", "")).strip() or None
+    if "away_code" in data:
+        match.away_code = strip_tags(data.get("away_code", "")).strip() or None
+    
+    # Update Text Fields
+    if "lineup" in data:
+        match.lineup = data.get("lineup")
+    if "review" in data:
+        match.review = data.get("review")
+
+    # 5. Helper untuk Update Stats (Angka/Integer)
+    # Fungsi ini mengecek apakah key ada di data. Jika ada, update. Jika tidak, biarkan lama.
+    def update_stat(key, current_value):
+        if key in data:
+            val = data.get(key)
+            # Jika dikirim null/None atau string kosong, set jadi None (atau 0 tergantung model)
+            if val == "" or val is None:
+                return None 
+            try:
+                return int(val)
+            except ValueError:
+                return current_value
+        return current_value
+
+    match.home_score = update_stat("home_score", match.home_score)
+    match.away_score = update_stat("away_score", match.away_score)
+    
+    match.shots_home = update_stat("shots_home", match.shots_home)
+    match.shots_away = update_stat("shots_away", match.shots_away)
+    
+    match.shots_on_target_home = update_stat("shots_on_target_home", match.shots_on_target_home)
+    match.shots_on_target_away = update_stat("shots_on_target_away", match.shots_on_target_away)
+    
+    match.possession_home = update_stat("possession_home", match.possession_home)
+    match.possession_away = update_stat("possession_away", match.possession_away)
+    
+    match.passes_home = update_stat("passes_home", match.passes_home)
+    match.passes_away = update_stat("passes_away", match.passes_away)
+    
+    match.pass_accuracy_home = update_stat("pass_accuracy_home", match.pass_accuracy_home)
+    match.pass_accuracy_away = update_stat("pass_accuracy_away", match.pass_accuracy_away)
+    
+    match.fouls_home = update_stat("fouls_home", match.fouls_home)
+    match.fouls_away = update_stat("fouls_away", match.fouls_away)
+    
+    match.yellow_cards_home = update_stat("yellow_cards_home", match.yellow_cards_home)
+    match.yellow_cards_away = update_stat("yellow_cards_away", match.yellow_cards_away)
+    
+    match.red_cards_home = update_stat("red_cards_home", match.red_cards_home)
+    match.red_cards_away = update_stat("red_cards_away", match.red_cards_away)
+    
+    match.offsides_home = update_stat("offsides_home", match.offsides_home)
+    match.offsides_away = update_stat("offsides_away", match.offsides_away)
+    
+    match.corners_home = update_stat("corners_home", match.corners_home)
+    match.corners_away = update_stat("corners_away", match.corners_away)
+
+    # 6. Simpan
+    try:
+        match.save()
+        return JsonResponse(match_to_dict(match), status=200)
+    except Exception as e:
+        return JsonResponse({"error": str(e)}, status=400)
