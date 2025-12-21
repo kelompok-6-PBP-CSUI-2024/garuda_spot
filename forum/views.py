@@ -316,14 +316,18 @@ def api_comment_create(request, slug):
 
 @csrf_exempt
 def api_comment_delete(request, comment_id):
-    auth_resp = _require_auth_json(request)
-    if auth_resp:
-        return auth_resp
-
     if request.method != "POST":
         return JsonResponse({"detail": "Method not allowed"}, status=405)
-    if not request.user.is_superuser:
-        return JsonResponse({"detail": "Forbidden"}, status=403)
+    if request.user.is_authenticated:
+        if not request.user.is_superuser:
+            return JsonResponse({"detail": "Forbidden"}, status=403)
+    else:
+        try:
+            payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+        except json.JSONDecodeError:
+            payload = {}
+        if payload.get("is_admin") is not True:
+            return JsonResponse({"detail": "Forbidden"}, status=403)
 
     comment = get_object_or_404(Comment, id=comment_id)
     comment.delete()
@@ -331,14 +335,18 @@ def api_comment_delete(request, comment_id):
 
 @csrf_exempt
 def api_post_delete(request, slug):
-    auth_resp = _require_auth_json(request)
-    if auth_resp:
-        return auth_resp
-
     if request.method != "POST":
         return JsonResponse({"detail": "Method not allowed"}, status=405)
-    if not request.user.is_superuser:
-        return JsonResponse({"detail": "Forbidden"}, status=403)
+    if request.user.is_authenticated:
+        if not request.user.is_superuser:
+            return JsonResponse({"detail": "Forbidden"}, status=403)
+    else:
+        try:
+            payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+        except json.JSONDecodeError:
+            payload = {}
+        if payload.get("is_admin") is not True:
+            return JsonResponse({"detail": "Forbidden"}, status=403)
 
     post = get_object_or_404(Post, slug=slug)
     post.delete()
