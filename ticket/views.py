@@ -68,9 +68,9 @@ def create_ticket_ajax(request):
         return HttpResponseBadRequest(b"INVALID_JSON")
     form = TicketMatchForm(parse_match_payload(payload))
     if form.is_valid():
-        form.save()
-        return HttpResponse(b"CREATED", status=201)
-    return HttpResponse(b"INVALID", status=400)
+        match = form.save()
+        return JsonResponse(serialize_match(match), status=201)
+    return JsonResponse({"detail": "INVALID", "errors": form.errors}, status=400)
 
 
 @csrf_exempt
@@ -84,9 +84,9 @@ def edit_ticket_ajax(request, id):
         return HttpResponseBadRequest(b"INVALID_JSON")
     form = TicketMatchForm(parse_match_payload(payload), instance=match)
     if form.is_valid():
-        form.save()
-        return HttpResponse(b"UPDATED", status=200)
-    return HttpResponse(b"INVALID", status=400)
+        updated = form.save()
+        return JsonResponse(serialize_match(updated), status=200)
+    return JsonResponse({"detail": "INVALID", "errors": form.errors}, status=400)
 
 
 @csrf_exempt
@@ -103,8 +103,8 @@ def create_link_ajax(request, match_uuid):
         link = form.save(commit=False)
         link.match = match
         link.save()
-        return HttpResponse(b"CREATED", status=201)
-    return HttpResponse(b"INVALID", status=400)
+        return JsonResponse(serialize_link(link), status=201)
+    return JsonResponse({"detail": "INVALID", "errors": form.errors}, status=400)
 
 
 # ----- Non-AJAX delete endpoints (redirect back) -----
@@ -112,18 +112,29 @@ def create_link_ajax(request, match_uuid):
 def delete_ticket(request, id):
     if not _is_admin_user(request):
         return HttpResponse(b"FORBIDDEN", status=403)
-    match = get_object_or_404(TicketMatch, match_id=id)
+    # Accept either the UUID-friendly match_id or the integer PK to avoid 404s from mismatched IDs.
+    match = (
+        TicketMatch.objects.filter(match_id=id).first()
+        or TicketMatch.objects.filter(pk=id).first()
+    )
+    if not match:
+        return HttpResponse(b"NOT_FOUND", status=404)
     match.delete()
-    return HttpResponseRedirect(reverse("tickets:main_view"))
+    return JsonResponse({"deleted": str(id)}, status=200)
 
 
 @csrf_exempt
 def delete_link(request, id):
     if not _is_admin_user(request):
         return HttpResponse(b"FORBIDDEN", status=403)
-    link = get_object_or_404(TicketLink, link_id=id)
+    link = (
+        TicketLink.objects.filter(link_id=id).first()
+        or TicketLink.objects.filter(pk=id).first()
+    )
+    if not link:
+        return HttpResponse(b"NOT_FOUND", status=404)
     link.delete()
-    return HttpResponseRedirect(reverse("tickets:main_view"))
+    return JsonResponse({"deleted": str(id)}, status=200)
 
 
 def ticket_detail(request, match_uuid):
