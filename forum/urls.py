@@ -15,6 +15,10 @@ urlpatterns = [
     path("post/<slug:slug>/delete/", views.delete_post, name="delete_post"),
     path("api/posts/", views.api_posts, name="api_posts"),  # GET list, POST create
     path("api/posts/<slug:slug>/", views.api_post_detail, name="api_post_detail"),  # GET detail
+    path("api/posts/<slug:slug>/like/", views.api_toggle_like, name="api_toggle_like"),
+    path("api/posts/<slug:slug>/delete/", views.api_delete_post, name="api_delete_post"),
+    path("api/comments/<int:comment_id>/delete/", views.api_delete_comment, name="api_delete_comment"),
+
 
 
 ]

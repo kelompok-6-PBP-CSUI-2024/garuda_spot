@@ -14,6 +14,11 @@ from .models import Post
 import json
 from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_POST
+from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse, HttpResponseForbidden
+from django.shortcuts import get_object_or_404
+
 
 def ensure_default_categories():
     if not Category.objects.exists():
@@ -288,22 +293,24 @@ def api_posts(request):
         title = (body.get("title") or "").strip()
         content = (body.get("content") or "").strip()
         category_name = (body.get("category") or "").strip()
-        author_name = (body.get("author_name") or body.get("username") or "").strip()
+
+        # FIX: terima "author" dari Flutter juga
+        author_name = (
+            body.get("author") or
+            body.get("author_name") or
+            body.get("username") or
+            ""
+        ).strip()
 
         if not title or not content:
-            return JsonResponse(
-                {"error": "Title dan content wajib diisi"},
-                status=400
-            )
+            return JsonResponse({"error": "Title dan content wajib diisi"}, status=400)
 
-        # Pastikan kategori default ada
         ensure_default_categories()
 
         category = None
         if category_name:
             category = Category.objects.filter(name__iexact=category_name).first()
         if category is None:
-            # fallback ke "News" kalau kategori dari Flutter tidak cocok
             category = Category.objects.filter(name__iexact="News").first()
 
         if not author_name:
@@ -313,11 +320,56 @@ def api_posts(request):
             title=title,
             body=content,
             category=category,
-            author_name=author_name,
+            author_name=author_name,   # sekarang kepake bener
             status=Post.PUBLISHED,
         )
 
         return JsonResponse(serialize_post(post), status=201)
 
-    # method lain: tolak
-    return JsonResponse({"error": "Method not allowed"}, status=405)
+    
+
+@csrf_exempt
+@login_required
+def api_toggle_like(request, slug):
+    if request.method != "POST":
+        return JsonResponse({"error": "Method not allowed"}, status=405)
+
+    post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
+
+    liked_posts = request.session.get("liked_posts", [])
+    if not isinstance(liked_posts, list):
+        liked_posts = []
+
+    if post.id in liked_posts:
+        Post.objects.filter(pk=post.pk, like_count__gt=0).update(like_count=F("like_count") - 1)
+        liked_posts.remove(post.id)
+        liked = False
+    else:
+        Post.objects.filter(pk=post.pk).update(like_count=F("like_count") + 1)
+        liked_posts.append(post.id)
+        liked = True
+
+    request.session["liked_posts"] = liked_posts
+    request.session.modified = True
+
+    post.refresh_from_db(fields=["like_count"])
+    return JsonResponse({"liked": liked, "like_count": post.like_count})
+
+
+@login_required
+@require_POST
+def api_delete_post(request, slug):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Forbidden")
+    post = get_object_or_404(Post, slug=slug)
+    post.delete()
+    return JsonResponse({"ok": True})
+
+@login_required
+@require_POST
+def api_delete_comment(request, comment_id):
+    if not request.user.is_superuser:
+        return HttpResponseForbidden("Forbidden")
+    c = get_object_or_404(Comment, id=comment_id)
+    c.delete()
+    return JsonResponse({"ok": True})

@@ -64,7 +64,7 @@ INSTALLED_APPS = [
     'ticket',
     'forum',
     'schedule',
-    'corsheaders',
+    'rest_framework',
 ]
 
 SOCIALACCOUNT_PROVIDERS = {
