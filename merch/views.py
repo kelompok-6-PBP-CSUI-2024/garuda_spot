@@ -198,6 +198,53 @@ def show_json_by_id(request, product_id):
 
 @csrf_exempt
 @login_required
+@require_http_methods(["POST"])
+def create_merch_api(request):
+    name = strip_tags(request.POST.get("name", "")).strip()
+    vendor = strip_tags(request.POST.get("vendor", "")).strip()
+    description = strip_tags(request.POST.get("description", "")).strip()
+    thumbnail = (request.POST.get("thumbnail") or "").strip()
+    category = (request.POST.get("category") or "").strip().lower()
+    link = (request.POST.get("link") or "").strip()
+
+    price = to_int(request.POST.get("price"), 0)
+    stock = to_int(request.POST.get("stock"), 0)
+
+    if not name:
+        return HttpResponseBadRequest("Field 'name' is required")
+    if not vendor:
+        return HttpResponseBadRequest("Field 'vendor' is required")
+    if category not in ALLOWED_CATEGORIES:
+        category = "others"
+
+    merch = Merch(
+        name=name,
+        vendor=vendor,
+        price=price,
+        stock=stock,
+        description=description,
+        thumbnail=thumbnail,
+        category=category,
+        link=link,
+    )
+    merch.save()
+
+    data = {
+        "id": merch.id,
+        "name": merch.name,
+        "vendor": merch.vendor,
+        "price": merch.price,
+        "stock": merch.stock,
+        "description": merch.description,
+        "thumbnail": merch.thumbnail,
+        "category": merch.category,
+        "link": merch.link,
+        "view_count": merch.view_count,
+    }
+    return JsonResponse(data, status=201)
+
+@csrf_exempt
+@login_required
 @require_http_methods(["POST", "PUT", "PATCH"])
 def update_merch_api(request, id):
     try:
