@@ -221,7 +221,6 @@ def api_posts(request):
         return JsonResponse({"results": data, "has_next": False})
 
     if request.method == "POST":
-        auth_resp = _require_auth_json(request)
         try:
             payload = json.loads(request.body.decode("utf-8")) if request.body else {}
         except json.JSONDecodeError:
@@ -235,7 +234,7 @@ def api_posts(request):
         if not title or not content:
             return JsonResponse({"detail": "Title and content are required"}, status=400)
         if not author_name:
-            return auth_resp or JsonResponse({"detail": "Authentication required"}, status=401)
+            author_name = "Guest"
 
         category = Category.objects.filter(name__iexact=category_name).first()
         if category is None:
@@ -305,8 +304,7 @@ def api_comment_create(request, slug):
     if not content:
         return JsonResponse({"detail": "Content is required"}, status=400)
     if not author_name:
-        auth_resp = _require_auth_json(request)
-        return auth_resp or JsonResponse({"detail": "Authentication required"}, status=401)
+        author_name = "Guest"
 
     post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
     comment = Comment.objects.create(
