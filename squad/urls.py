@@ -5,6 +5,7 @@ app_name = "squad"
 
 urlpatterns = [
     path("", views.index, name="index"),
+    path("api/players/", views.api_players, name="api_players"),
     path("player/new/", views.player_create, name="player_create"),
     path("player/<int:pk>/edit/", views.player_edit, name="player_edit"),
     path("player/<int:pk>/", views.player_detail, name="player_detail"),
