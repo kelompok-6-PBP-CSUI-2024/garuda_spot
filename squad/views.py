@@ -82,10 +82,14 @@ def api_player_detail(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_player_create(request):
-    try:
-        data = json.loads(request.body.decode())
-    except Exception:
-        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    data = {}
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            data = json.loads(request.body.decode())
+        except Exception:
+            return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    else:
+        data = request.POST.dict()
 
     if not _is_admin_request(request, data):
         return JsonResponse({"detail": "Forbidden"}, status=403)
@@ -119,10 +123,14 @@ def api_player_update(request, pk):
     if request.method == "GET":
         return JsonResponse(_player_to_dict(p))
 
-    try:
-        data = json.loads(request.body.decode())
-    except Exception:
-        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    data = {}
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            data = json.loads(request.body.decode())
+        except Exception:
+            return JsonResponse({"detail": "Invalid JSON"}, status=400)
+    else:
+        data = request.POST.dict()
 
     if not _is_admin_request(request, data):
         return JsonResponse({"detail": "Admins only"}, status=403)
@@ -165,10 +173,14 @@ def api_player_update(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 def api_player_delete(request, pk):
-    try:
-        data = json.loads(request.body.decode())
-    except Exception:
-        data = {}
+    data = {}
+    if request.content_type and "application/json" in request.content_type:
+        try:
+            data = json.loads(request.body.decode())
+        except Exception:
+            data = {}
+    else:
+        data = request.POST.dict()
 
     if not _is_admin_request(request, data):
         return JsonResponse({"detail": "Admins only"}, status=403)
