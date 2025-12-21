@@ -1,68 +1,65 @@
-from django.core.paginator import Paginator, EmptyPage
-from django.db.models import Q, F
-from django.http import JsonResponse, HttpResponseForbidden
-from django.shortcuts import render, get_object_or_404, redirect
+import json
+
+from django.contrib.auth.decorators import login_required
+from django.core.paginator import EmptyPage, Paginator
+from django.db.models import F
+from django.http import (
+    HttpResponseForbidden,
+    JsonResponse,
+)
+from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.utils import timezone
+from django.utils.text import slugify
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_GET, require_POST
-from django.contrib.auth.decorators import login_required
 
-from .models import Post, Category, Comment
-from .forms import PostFilterForm, PostForm, CommentForm
+from .forms import CommentForm, PostFilterForm, PostForm
+from .models import Category, Comment, Like, Post
 
-import json
+
+# Helpers
+def _is_admin(user):
+    return bool(user and user.is_authenticated and user.is_superuser)
 
 
 def ensure_default_categories():
-    if not Category.objects.exists():
-        Category.objects.bulk_create([
-            Category(name="News",  slug="news"),
-            Category(name="Player", slug="player"),
-            Category(name="Merch", slug="merch"),
-            Category(name="Ticket", slug="ticket"),
-            Category(name="Match", slug="match"),
-        ])
+    defaults = ["Match", "Merch", "News", "Player", "Ticket"]
+    for name in defaults:
+        Category.objects.get_or_create(name=name, defaults={"slug": slugify(name)})
 
 
-def _is_admin(user) -> bool:
-    return user.is_authenticated and user.is_superuser
-
-
-@login_required
 def _get_posts_context(request):
-    form = PostFilterForm(request.GET or None)
-    params = form.cleaned_data if form.is_bound and form.is_valid() else {}
+    active_category = request.GET.get("category", "all")
 
-    qs = Post.objects.select_related("category").filter(status=Post.PUBLISHED)
-
-    cat_slug = params.get("category") or request.GET.get("category") or "all"
-    active_category = "all"
-    if cat_slug and cat_slug != "all":
-        qs = qs.filter(category__slug=cat_slug)
-        active_category = cat_slug
-
-    q = params.get("q") or request.GET.get("q")
-    if q:
-        qs = qs.filter(
-            Q(title__icontains=q) |
-            Q(body__icontains=q) |
-            Q(excerpt__icontains=q)
-        )
+    qs = Post.objects.select_related("category").filter(status=Post.PUBLISHED).order_by(
+        "-created_at"
+    )
+    if active_category and active_category != "all":
+        qs = qs.filter(category__slug=active_category)
 
     paginator = Paginator(qs, 6)
     page = request.GET.get("page", 1)
-
     page_obj = paginator.get_page(page)
+
+    # liked_ids sekarang dari DB Like (bukan session)
+    page_posts = list(page_obj.object_list)
+    liked_ids = set(
+        Like.objects.filter(user=request.user, post__in=page_posts).values_list(
+            "post_id", flat=True
+        )
+    )
+
     return {
         "posts": page_obj.object_list,
         "page_obj": page_obj,
         "active_category": active_category or "all",
-        "liked_ids": set(request.session.get("liked_posts", [])),
-        "is_admin": request.user.is_superuser,  # biar template bisa hide tombol delete
+        "liked_ids": liked_ids,
+        "is_admin": request.user.is_superuser,
     }
 
 
+# WEB pages (template)
 @login_required
 def post_list(request):
     ensure_default_categories()
@@ -105,7 +102,6 @@ def post_list_partial(request):
             )
         )
     html = "".join(html_list)
-
     return JsonResponse({"html": html, "has_next": ctx["page_obj"].has_next()})
 
 
@@ -141,8 +137,8 @@ def post_detail(request, slug):
             "comment_form": CommentForm(),
             "year": timezone.now().year,
             "categories": Category.objects.all(),
-            "active_category": post.category.slug,
-            "is_admin": request.user.is_superuser,  # hide tombol delete comment
+            "active_category": post.category.slug if post.category_id else "all",
+            "is_admin": request.user.is_superuser,
         },
     )
 
@@ -155,6 +151,9 @@ def comment_create(request, slug):
     if form.is_valid():
         comment = form.save(commit=False)
         comment.post = post
+        # kalau form belum set author_name, isi dari user
+        if not getattr(comment, "author_name", ""):
+            comment.author_name = request.user.username
         comment.save()
         html = render_to_string(
             "forum/_comment.html",
@@ -168,37 +167,31 @@ def comment_create(request, slug):
 @login_required
 @require_POST
 def post_like(request, slug):
+    """WEB toggle like (template) - sekarang per-user via DB Like."""
     post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
 
-    liked_posts = request.session.get("liked_posts", [])
-    if not isinstance(liked_posts, list):
-        liked_posts = []
-
-    if post.id in liked_posts:
-        Post.objects.filter(pk=post.pk, like_count__gt=0).update(like_count=F("like_count") - 1)
-        liked_posts.remove(post.id)
+    existing = Like.objects.filter(post=post, user=request.user).first()
+    if existing:
+        existing.delete()
         liked = False
     else:
-        Post.objects.filter(pk=post.pk).update(like_count=F("like_count") + 1)
-        liked_posts.append(post.id)
+        Like.objects.create(post=post, user=request.user)
         liked = True
 
-    request.session["liked_posts"] = liked_posts
-    request.session.modified = True
-
+    # sync like_count biar field existing tetap dipakai
+    new_count = Like.objects.filter(post=post).count()
+    Post.objects.filter(pk=post.pk).update(like_count=new_count)
     post.refresh_from_db(fields=["like_count"])
+
     return JsonResponse({"ok": True, "liked": liked, "like_count": post.like_count})
 
 
-# =========================
-# WEB delete: ADMIN ONLY
-# =========================
+# WEB delete: SUPERUSER ONLY
 @login_required
 @require_POST
 def delete_comment(request, comment_id):
     if not _is_admin(request.user):
         return HttpResponseForbidden("Anda tidak punya izin untuk menghapus komentar ini.")
-
     comment = get_object_or_404(Comment, id=comment_id)
     post_slug = comment.post.slug
     comment.delete()
@@ -210,16 +203,13 @@ def delete_comment(request, comment_id):
 def delete_post(request, slug):
     if not _is_admin(request.user):
         return HttpResponseForbidden("Anda tidak punya izin untuk menghapus post ini.")
-
     post = get_object_or_404(Post, slug=slug)
     post.delete()
     return redirect("forum:post_list")
 
 
-# =========================
 # JSON / Flutter
-# =========================
-def serialize_post(post):
+def serialize_post(post, request=None):
     created = post.created_at
     if created is not None:
         created_local = timezone.localtime(created)
@@ -230,6 +220,10 @@ def serialize_post(post):
     category_name = post.category.name if post.category_id else ""
     author_name = post.author_name or ""
 
+    is_liked = False
+    if request is not None and request.user.is_authenticated:
+        is_liked = Like.objects.filter(post=post, user=request.user).exists()
+
     return {
         "id": post.pk,
         "slug": post.slug,
@@ -239,10 +233,12 @@ def serialize_post(post):
         "author": author_name,
         "date": date_str,
         "like_count": post.like_count,
+        "is_liked": is_liked,
     }
 
 
 @require_GET
+@login_required
 def api_post_detail(request, slug):
     post = get_object_or_404(
         Post.objects.select_related("category"),
@@ -250,7 +246,7 @@ def api_post_detail(request, slug):
         status=Post.PUBLISHED,
     )
 
-    post_data = serialize_post(post)
+    post_data = serialize_post(post, request=request)
 
     comments_qs = post.comments.all().order_by("created_at")
     comments_data = []
@@ -262,17 +258,20 @@ def api_post_detail(request, slug):
         else:
             time_str = ""
 
-        comments_data.append({
-            "id": c.pk,
-            "author": c.author_name,
-            "content": c.body,
-            "time": time_str,
-        })
+        comments_data.append(
+            {
+                "id": c.pk,
+                "author": c.author_name,
+                "content": c.body,
+                "time": time_str,
+            }
+        )
 
     return JsonResponse({"post": post_data, "comments": comments_data})
 
 
 @csrf_exempt
+@login_required
 def api_posts(request):
     # GET: list
     if request.method == "GET":
@@ -282,7 +281,7 @@ def api_posts(request):
             .filter(status=Post.PUBLISHED)
             .order_by("-created_at")
         )
-        data = [serialize_post(p) for p in qs]
+        data = [serialize_post(p, request=request) for p in qs]
         return JsonResponse({"results": data})
 
     # POST: create
@@ -296,12 +295,8 @@ def api_posts(request):
         content = (body.get("content") or "").strip()
         category_name = (body.get("category") or "").strip()
 
-        author_name = (
-            body.get("author")
-            or body.get("author_name")
-            or body.get("username")
-            or ""
-        ).strip()
+        # jangan percaya author dari client, ambil dari user login
+        author_name = request.user.username
 
         if not title or not content:
             return JsonResponse({"error": "Title dan content wajib diisi"}, status=400)
@@ -314,9 +309,6 @@ def api_posts(request):
         if category is None:
             category = Category.objects.filter(name__iexact="News").first()
 
-        if not author_name:
-            author_name = "Orang"
-
         post = Post.objects.create(
             title=title,
             body=content,
@@ -324,7 +316,7 @@ def api_posts(request):
             author_name=author_name,
             status=Post.PUBLISHED,
         )
-        return JsonResponse(serialize_post(post), status=201)
+        return JsonResponse(serialize_post(post, request=request), status=201)
 
     return JsonResponse({"error": "Method not allowed"}, status=405)
 
@@ -337,47 +329,75 @@ def api_toggle_like(request, slug):
 
     post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
 
-    liked_posts = request.session.get("liked_posts", [])
-    if not isinstance(liked_posts, list):
-        liked_posts = []
-
-    if post.id in liked_posts:
-        Post.objects.filter(pk=post.pk, like_count__gt=0).update(like_count=F("like_count") - 1)
-        liked_posts.remove(post.id)
+    existing = Like.objects.filter(post=post, user=request.user).first()
+    if existing:
+        existing.delete()
         liked = False
     else:
-        Post.objects.filter(pk=post.pk).update(like_count=F("like_count") + 1)
-        liked_posts.append(post.id)
+        Like.objects.create(post=post, user=request.user)
         liked = True
 
-    request.session["liked_posts"] = liked_posts
-    request.session.modified = True
-
+    new_count = Like.objects.filter(post=post).count()
+    Post.objects.filter(pk=post.pk).update(like_count=new_count)
     post.refresh_from_db(fields=["like_count"])
+
     return JsonResponse({"liked": liked, "like_count": post.like_count})
 
 
-# =========================
-# API delete: ADMIN ONLY
-# =========================
+@csrf_exempt
+@login_required
+@require_POST
+def api_create_comment(request, slug):
+    post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
+
+    try:
+        body = json.loads(request.body.decode("utf-8"))
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "Invalid JSON"}, status=400)
+
+    content = (body.get("content") or "").strip()
+    if not content:
+        return JsonResponse({"error": "Content wajib diisi"}, status=400)
+
+    comment = Comment.objects.create(
+        post=post,
+        author_name=request.user.username,
+        body=content,
+    )
+
+    created_local = timezone.localtime(comment.created_at) if comment.created_at else None
+    time_str = created_local.strftime("%d %b %Y %H:%M") if created_local else ""
+
+    return JsonResponse(
+        {
+            "id": comment.pk,
+            "author": comment.author_name,
+            "content": comment.body,
+            "time": time_str,
+        },
+        status=201,
+    )
+
+
+# API delete: SUPERUSER ONLY
+
 @csrf_exempt
 @login_required
 @require_POST
 def api_delete_post(request, slug):
     if not _is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
+        return JsonResponse({"error": "Forbidden", "detail": "Superuser only"}, status=403)
 
     post = get_object_or_404(Post, slug=slug)
     post.delete()
     return JsonResponse({"ok": True})
-
 
 @csrf_exempt
 @login_required
 @require_POST
 def api_delete_comment(request, comment_id):
     if not _is_admin(request.user):
-        return JsonResponse({"error": "Forbidden"}, status=403)
+        return JsonResponse({"error": "Forbidden", "detail": "Superuser only"}, status=403)
 
     c = get_object_or_404(Comment, id=comment_id)
     c.delete()
