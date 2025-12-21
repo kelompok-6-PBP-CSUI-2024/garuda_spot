@@ -1,21 +1,171 @@
-# --- imports (perbaiki Http404 & tambah reverse) ---
-from django.http import JsonResponse, HttpResponseBadRequest, Http404, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
 from django.views.decorators.http import require_http_methods
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.utils.html import strip_tags
+from django.views.decorators.csrf import csrf_exempt,ensure_csrf_cookie
+from django.shortcuts import get_object_or_404
+from django.contrib.auth.decorators import login_required
+from datetime import date
+import json
 from django.template.loader import render_to_string
 from django.urls import reverse
-from datetime import date
-from django.shortcuts import render, get_object_or_404
-from .models import Player, POS_CHOICES
-from django.contrib.auth.decorators import login_required
 
-# kalau kamu punya ModelForm:
-# from .forms import PlayerForm
+
+from .models import Player, POS_CHOICES
 
 ALLOWED_POS = {c[0] for c in POS_CHOICES if c[0]}
 
 
+def _parse_date(s: str | None):
+    if not s:
+        return None
+    try:
+        y, m, d = map(int, s.split("-"))
+        return date(y, m, d)
+    except Exception:
+        return None
+
+
+def _to_int(val, default=0, nonneg=False):
+    try:
+        v = int(val)
+        if nonneg and v < 0:
+            return default
+        return v
+    except (TypeError, ValueError):
+        return default
+
+
+def _pos(v: str | None):
+    v = (v or "").strip().upper()
+    return v if v in ALLOWED_POS else ""
+
+
+def _player_to_dict(p: Player):
+    return {
+        "id": p.id,
+        "name": p.name,
+        "fname": p.fname,
+        "lname": p.lname,
+        "photo_url": p.photo_url,
+        "birth_date": p.birth_date.isoformat() if p.birth_date else None,
+        "age": p.age,
+        "club": p.club,
+        "height_cm": p.height_cm,
+        "positions": p.positions_list,
+        "role_tag": p.role_tag,
+        "caps": p.caps,
+        "goals": p.goals,
+        "assists": p.assists,
+    }
+
+
+@require_http_methods(["GET"])
+def api_players(request):
+    players = Player.objects.all().order_by("name")
+    return JsonResponse([_player_to_dict(p) for p in players], safe=False)
+
+
+@require_http_methods(["GET"])
+def api_player_detail(request, pk):
+    p = get_object_or_404(Player, pk=pk)
+    return JsonResponse(_player_to_dict(p))
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def api_player_create(request):
+    if not getattr(request.user, "is_admin", False):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
+    try:
+        data = json.loads(request.body.decode())
+    except Exception:
+        return HttpResponseBadRequest("Invalid JSON")
+
+    name = (data.get("name") or "").strip()
+    if not name:
+        return HttpResponseBadRequest("Name is required")
+
+    p = Player.objects.create(
+        name=name,
+        photo_url=(data.get("photo_url") or "").strip(),
+        club=(data.get("club") or "").strip(),
+        birth_date=_parse_date(data.get("birth_date")),
+        height_cm=_to_int(data.get("height_cm"), default=None, nonneg=True),
+        position1=_pos(data.get("position1")),
+        position2=_pos(data.get("position2")),
+        position3=_pos(data.get("position3")),
+        caps=_to_int(data.get("caps"), default=0, nonneg=True) or 0,
+        goals=_to_int(data.get("goals"), default=0, nonneg=True) or 0,
+        assists=_to_int(data.get("assists"), default=0, nonneg=True) or 0,
+    )
+
+    return JsonResponse(_player_to_dict(p), status=201)
+
+
+@csrf_exempt
+@require_http_methods(["GET", "POST"])
+@login_required
+def api_player_update(request, pk):
+    if not getattr(request.user, "is_admin", False):
+        return HttpResponseForbidden("Admins only")
+
+    p = get_object_or_404(Player, pk=pk)
+
+    if request.method == "GET":
+        return JsonResponse(_player_to_dict(p))
+
+    try:
+        data = json.loads(request.body.decode())
+    except Exception:
+        return HttpResponseBadRequest("Invalid JSON")
+
+    name = data.get("name")
+    if name is None or not str(name).strip():
+        return HttpResponseBadRequest("Name is required")
+    p.name = str(name).strip()
+
+    if "photo_url" in data:
+        p.photo_url = (data.get("photo_url") or "").strip()
+
+    if "club" in data:
+        p.club = (data.get("club") or "").strip()
+
+    if "birth_date" in data:
+        p.birth_date = _parse_date(data.get("birth_date"))
+
+    if "height_cm" in data:
+        p.height_cm = _to_int(data.get("height_cm"), default=None, nonneg=True)
+
+    if "position1" in data:
+        p.position1 = _pos(data.get("position1"))
+    if "position2" in data:
+        p.position2 = _pos(data.get("position2"))
+    if "position3" in data:
+        p.position3 = _pos(data.get("position3"))
+
+    if "caps" in data:
+        p.caps = _to_int(data.get("caps"), default=0, nonneg=True) or 0
+    if "goals" in data:
+        p.goals = _to_int(data.get("goals"), default=0, nonneg=True) or 0
+    if "assists" in data:
+        p.assists = _to_int(data.get("assists"), default=0, nonneg=True) or 0
+
+    p.save()
+
+    return JsonResponse(_player_to_dict(p))
+
+@csrf_exempt
+@require_http_methods(["POST"])
+@login_required
+def api_player_delete(request, pk):
+    if not getattr(request.user, "is_admin", False):
+        return HttpResponseForbidden("Admins only")
+
+    p = get_object_or_404(Player, pk=pk)
+    pid = p.id
+    p.delete()
+    return JsonResponse({"ok": True, "id": pid})
 @require_http_methods(["GET"])
 def api_players(request):
     players = Player.objects.all().order_by("id")
@@ -48,12 +198,10 @@ def player_detail(request, pk):
     p = get_object_or_404(Player, pk=pk)
     return render(request, "squad/detail.html", {"p": p})
 
-# ===================== RESTRICTED (admin only) =====================
 
 @require_http_methods(["POST"])
 @login_required
 def player_delete(request, pk):
-    # hanya admin
     if not getattr(request.user, "is_admin", False):
         return HttpResponseForbidden("Admins only")
     p = get_object_or_404(Player, pk=pk)
@@ -62,10 +210,10 @@ def player_delete(request, pk):
     return JsonResponse({"ok": True, "id": pid})
 
 @require_http_methods(["GET"])
+
 @ensure_csrf_cookie
 @login_required
 def player_form(request):
-    # hanya admin
     if not getattr(request.user, "is_admin", False):
         return HttpResponseForbidden("Admins only")
     html = render_to_string(
@@ -74,7 +222,6 @@ def player_form(request):
             "POS_CHOICES": POS_CHOICES,
             "submit_url": reverse("squad:player_create"),
             "title": "Tambah Pemain",
-            # "form": PlayerForm(),  # kalau kamu pakai Django Form
         },
         request=request
     )
@@ -83,7 +230,6 @@ def player_form(request):
 @require_http_methods(["POST"])
 @login_required
 def player_create(request):
-    # hanya admin
     if not getattr(request.user, "is_admin", False):
         return HttpResponseForbidden("Admins only")
 
@@ -144,7 +290,6 @@ def player_create(request):
 @require_http_methods(["GET", "POST"])
 @login_required
 def player_edit(request, pk):
-    # hanya admin
     if not getattr(request.user, "is_admin", False):
         return HttpResponseForbidden("Admins only")
 
@@ -161,7 +306,6 @@ def player_edit(request, pk):
                 "POS_CHOICES": POS_CHOICES,
                 "submit_url": reverse("squad:player_edit", args=[p.id]),
                 "title": f"Edit {p.name}",
-                # "form": PlayerForm(instance=p),
             },
             request=request
         )
@@ -210,3 +354,51 @@ def player_edit(request, pk):
     moved = (old_role != p.role_tag)
     card_html = render_to_string("squad/_player_card.html", {"p": p}, request=request)
     return JsonResponse({"id": p.id, "role_tag": p.role_tag, "html": card_html, "moved": moved})
+
+@require_http_methods(["GET"])
+def api_players(request):
+    players = Player.objects.all().order_by("name")
+
+    data = []
+    for p in players:
+        data.append({
+            "id": p.id,
+            "name": p.name,
+            "fname": p.fname,
+            "lname": p.lname,
+            "photo_url": p.photo_url,
+            "birth_date": p.birth_date.isoformat() if p.birth_date else None,
+            "age": p.age,
+            "club": p.club,
+            "height_cm": p.height_cm,
+
+            "positions": p.positions_list,
+            "positions_display": p.positions_display,
+            "role_tag": p.role_tag,
+
+            "caps": p.caps,
+            "goals": p.goals,
+            "assists": p.assists,
+        })
+
+    return JsonResponse(data, safe=False)
+
+@require_http_methods(["GET"])
+def api_player_detail(request, pk):
+    p = get_object_or_404(Player, pk=pk)
+
+    data = {
+        "id": p.id,
+        "name": p.name,
+        "photo_url": p.photo_url,
+        "age": p.age,
+        "club": p.club,
+        "height_cm": p.height_cm,
+        "positions": p.positions_list,
+        "role_tag": p.role_tag,
+        "caps": p.caps,
+        "goals": p.goals,
+        "assists": p.assists,
+    }
+    return JsonResponse(data)
+

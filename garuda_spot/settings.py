@@ -36,6 +36,8 @@ ALLOWED_HOSTS = ["localhost", "127.0.0.1","hasanul-muttaqin-garudaspot.pbp.cs.ui
 
 CSRF_TRUSTED_ORIGINS = [
     "https://hasanul-muttaqin-garudaspot.pbp.cs.ui.ac.id"
+    "http://localhost:*",
+
 ]
 
 SITE_ID=1
@@ -90,6 +92,7 @@ LOGOUT_REDIRECT_URL = 'news:show_main'
 
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'corsheaders.middleware.CorsMiddleware',
