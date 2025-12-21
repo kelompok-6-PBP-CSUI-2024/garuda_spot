@@ -13,5 +13,11 @@ urlpatterns = [
     path("<slug:slug>/like/", views.post_like, name="post_like"),
     path("comment/<int:comment_id>/delete/", views.delete_comment, name="delete_comment"),
     path("post/<slug:slug>/delete/", views.delete_post, name="delete_post"),
+    path("api/posts/", views.api_posts, name="api_posts"),
+    path("api/posts/<slug:slug>/", views.api_post_detail, name="api_post_detail"),
+    path("api/posts/<slug:slug>/comments/", views.api_comment_create, name="api_comment_create"),
+    path("api/comments/<int:comment_id>/delete/", views.api_comment_delete, name="api_comment_delete"),
+    path("api/posts/<slug:slug>/like/", views.api_post_like, name="api_post_like"),
+    path("api/posts/<slug:slug>/delete/", views.api_post_delete, name="api_post_delete"),
 
 ]

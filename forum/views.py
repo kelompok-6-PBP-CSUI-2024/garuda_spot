@@ -11,6 +11,8 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .models import Comment 
 from .models import Post
+import json
+from django.views.decorators.csrf import csrf_exempt
 
 def ensure_default_categories():
     if not Category.objects.exists():
@@ -179,3 +181,175 @@ def delete_post(request, slug):
         return HttpResponseForbidden("Anda tidak punya izin untuk menghapus post ini.")
     post.delete()
     return redirect("forum:post_list")
+
+def _require_auth_json(request):
+    if not request.user.is_authenticated:
+        return JsonResponse({"detail": "Authentication required"}, status=401)
+    return None
+
+def _post_to_dict(post, request):
+    liked_posts = request.session.get("liked_posts", [])
+    if not isinstance(liked_posts, list):
+        liked_posts = []
+    return {
+        "id": post.id,
+        "slug": post.slug,
+        "author": post.author_name,
+        "date": post.created_at.strftime("%d-%m-%Y"),
+        "title": post.title,
+        "content": post.body,
+        "category": post.category.name,
+        "like_count": post.like_count,
+        "is_liked": post.id in liked_posts,
+    }
+
+def _comment_to_dict(comment):
+    return {
+        "id": comment.id,
+        "author": comment.author_name,
+        "time": comment.created_at.strftime("%d-%m-%Y %H:%M"),
+        "content": comment.body,
+    }
+
+@csrf_exempt
+def api_posts(request):
+    auth_resp = _require_auth_json(request)
+    if auth_resp:
+        return auth_resp
+
+    ensure_default_categories()
+
+    if request.method == "GET":
+        qs = Post.objects.select_related("category").filter(status=Post.PUBLISHED)
+        data = [_post_to_dict(post, request) for post in qs]
+        return JsonResponse({"results": data, "has_next": False})
+
+    if request.method == "POST":
+        try:
+            payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+        except json.JSONDecodeError:
+            return JsonResponse({"detail": "Invalid JSON"}, status=400)
+
+        title = (payload.get("title") or "").strip()
+        content = (payload.get("content") or "").strip()
+        category_name = (payload.get("category") or "Match").strip()
+
+        if not title or not content:
+            return JsonResponse({"detail": "Title and content are required"}, status=400)
+
+        category = Category.objects.filter(name__iexact=category_name).first()
+        if category is None:
+            category = Category.objects.filter(slug__iexact=category_name).first()
+        if category is None:
+            category = Category.objects.filter(name__iexact="Match").first()
+
+        post = Post.objects.create(
+            title=title,
+            author_name=request.user.username,
+            category=category,
+            body=content,
+            status=Post.PUBLISHED,
+        )
+
+        return JsonResponse(_post_to_dict(post, request), status=201)
+
+    return JsonResponse({"detail": "Method not allowed"}, status=405)
+
+@csrf_exempt
+def api_post_detail(request, slug):
+    auth_resp = _require_auth_json(request)
+    if auth_resp:
+        return auth_resp
+
+    post = get_object_or_404(
+        Post.objects.select_related("category"),
+        slug=slug,
+        status=Post.PUBLISHED,
+    )
+    comments = post.comments.all()
+    return JsonResponse({
+        "post": _post_to_dict(post, request),
+        "comments": [_comment_to_dict(c) for c in comments],
+    })
+
+@csrf_exempt
+def api_post_like(request, slug):
+    auth_resp = _require_auth_json(request)
+    if auth_resp:
+        return auth_resp
+
+    post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
+    liked_posts = request.session.get("liked_posts", [])
+    if not isinstance(liked_posts, list):
+        liked_posts = []
+
+    if post.id in liked_posts:
+        Post.objects.filter(pk=post.pk, like_count__gt=0).update(like_count=F("like_count") - 1)
+        liked_posts.remove(post.id)
+        liked = False
+    else:
+        Post.objects.filter(pk=post.pk).update(like_count=F("like_count") + 1)
+        liked_posts.append(post.id)
+        liked = True
+
+    request.session["liked_posts"] = liked_posts
+    request.session.modified = True
+    post.refresh_from_db(fields=["like_count"])
+
+    return JsonResponse({"ok": True, "liked": liked, "like_count": post.like_count})
+
+@csrf_exempt
+def api_comment_create(request, slug):
+    auth_resp = _require_auth_json(request)
+    if auth_resp:
+        return auth_resp
+
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+
+    try:
+        payload = json.loads(request.body.decode("utf-8")) if request.body else {}
+    except json.JSONDecodeError:
+        return JsonResponse({"detail": "Invalid JSON"}, status=400)
+
+    content = (payload.get("content") or "").strip()
+    if not content:
+        return JsonResponse({"detail": "Content is required"}, status=400)
+
+    post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
+    comment = Comment.objects.create(
+        post=post,
+        author_name=request.user.username,
+        body=content,
+    )
+    return JsonResponse(_comment_to_dict(comment), status=201)
+
+@csrf_exempt
+def api_comment_delete(request, comment_id):
+    auth_resp = _require_auth_json(request)
+    if auth_resp:
+        return auth_resp
+
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    if not request.user.is_superuser:
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+
+    comment = get_object_or_404(Comment, id=comment_id)
+    comment.delete()
+    return JsonResponse({"ok": True})
+
+@csrf_exempt
+def api_post_delete(request, slug):
+    auth_resp = _require_auth_json(request)
+    if auth_resp:
+        return auth_resp
+
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    if not request.user.is_superuser:
+        return JsonResponse({"detail": "Forbidden"}, status=403)
+
+    post = get_object_or_404(Post, slug=slug)
+    post.delete()
+    return JsonResponse({"ok": True})
