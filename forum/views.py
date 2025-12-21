@@ -1,23 +1,17 @@
 from django.core.paginator import Paginator, EmptyPage
-from django.http import JsonResponse, Http404, HttpResponseForbidden
+from django.db.models import Q, F
+from django.http import JsonResponse, HttpResponseForbidden
 from django.shortcuts import render, get_object_or_404, redirect
 from django.template.loader import render_to_string
 from django.utils import timezone
-from django.db.models import Q, F
-from django.views.decorators.http import require_POST
-from .models import Post, Category
-from .forms import PostFilterForm, PostForm, CommentForm
-from django.contrib import messages
-from django.contrib.auth.decorators import login_required
-from .models import Comment 
-from .models import Post
-import json
-from django.views.decorators.http import require_GET
 from django.views.decorators.csrf import csrf_exempt
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_GET, require_POST
 from django.contrib.auth.decorators import login_required
-from django.http import JsonResponse, HttpResponseForbidden
-from django.shortcuts import get_object_or_404
+
+from .models import Post, Category, Comment
+from .forms import PostFilterForm, PostForm, CommentForm
+
+import json
 
 
 def ensure_default_categories():
@@ -29,6 +23,11 @@ def ensure_default_categories():
             Category(name="Ticket", slug="ticket"),
             Category(name="Match", slug="match"),
         ])
+
+
+def _is_admin(user) -> bool:
+    return user.is_authenticated and user.is_superuser
+
 
 @login_required
 def _get_posts_context(request):
@@ -54,13 +53,15 @@ def _get_posts_context(request):
     paginator = Paginator(qs, 6)
     page = request.GET.get("page", 1)
 
-    page_obj = paginator.get_page(page) 
+    page_obj = paginator.get_page(page)
     return {
         "posts": page_obj.object_list,
         "page_obj": page_obj,
         "active_category": active_category or "all",
-        "liked_ids": set(request.session.get("liked_posts", [])), 
+        "liked_ids": set(request.session.get("liked_posts", [])),
+        "is_admin": request.user.is_superuser,  # biar template bisa hide tombol delete
     }
+
 
 @login_required
 def post_list(request):
@@ -72,17 +73,16 @@ def post_list(request):
         "year": timezone.now().year,
         "post_form": PostForm(),
         "form": PostFilterForm(request.GET or None),
+        "is_admin": request.user.is_superuser,
     }
-    
+
     try:
         base_ctx.update(_get_posts_context(request))
     except EmptyPage:
-        base_ctx.update({
-            "posts": [],
-            "page_obj": None,
-        })
-        
+        base_ctx.update({"posts": [], "page_obj": None})
+
     return render(request, "forum/post_list.html", base_ctx)
+
 
 @login_required
 def post_list_partial(request):
@@ -96,16 +96,18 @@ def post_list_partial(request):
         html_list.append(
             render_to_string(
                 "forum/_post_card.html",
-                {"p": post, "liked_ids": ctx.get("liked_ids", set())},
-                request=request
+                {
+                    "p": post,
+                    "liked_ids": ctx.get("liked_ids", set()),
+                    "is_admin": request.user.is_superuser,
+                },
+                request=request,
             )
         )
     html = "".join(html_list)
-    
-    return JsonResponse({
-        "html": html, 
-        "has_next": ctx["page_obj"].has_next()
-    })
+
+    return JsonResponse({"html": html, "has_next": ctx["page_obj"].has_next()})
+
 
 @login_required
 @require_POST
@@ -113,23 +115,37 @@ def post_create(request):
     form = PostForm(request.POST)
     if form.is_valid():
         post = form.save()
-        card_html = render_to_string("forum/_post_card.html", {"p": post}, request=request)
+        card_html = render_to_string(
+            "forum/_post_card.html",
+            {"p": post, "is_admin": request.user.is_superuser},
+            request=request,
+        )
         return JsonResponse({"ok": True, "html": card_html})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
 
 
 @login_required
 def post_detail(request, slug):
-    post = get_object_or_404(Post.objects.select_related("category"), slug=slug, status=Post.PUBLISHED)
+    post = get_object_or_404(
+        Post.objects.select_related("category"),
+        slug=slug,
+        status=Post.PUBLISHED,
+    )
     comments = post.comments.all()
-    return render(request, "forum/post_detail.html", {
-        "post": post,
-        "comments": comments,
-        "comment_form": CommentForm(),
-        "year": timezone.now().year,
-        "categories": Category.objects.all(),
-        "active_category": post.category.slug
-    })
+    return render(
+        request,
+        "forum/post_detail.html",
+        {
+            "post": post,
+            "comments": comments,
+            "comment_form": CommentForm(),
+            "year": timezone.now().year,
+            "categories": Category.objects.all(),
+            "active_category": post.category.slug,
+            "is_admin": request.user.is_superuser,  # hide tombol delete comment
+        },
+    )
+
 
 @login_required
 @require_POST
@@ -140,14 +156,20 @@ def comment_create(request, slug):
         comment = form.save(commit=False)
         comment.post = post
         comment.save()
-        html = render_to_string("forum/_comment.html", {"c": comment}, request=request)
+        html = render_to_string(
+            "forum/_comment.html",
+            {"c": comment, "is_admin": request.user.is_superuser},
+            request=request,
+        )
         return JsonResponse({"ok": True, "html": html})
     return JsonResponse({"ok": False, "errors": form.errors}, status=400)
+
 
 @login_required
 @require_POST
 def post_like(request, slug):
     post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
+
     liked_posts = request.session.get("liked_posts", [])
     if not isinstance(liked_posts, list):
         liked_posts = []
@@ -163,38 +185,41 @@ def post_like(request, slug):
 
     request.session["liked_posts"] = liked_posts
     request.session.modified = True
+
     post.refresh_from_db(fields=["like_count"])
-    
     return JsonResponse({"ok": True, "liked": liked, "like_count": post.like_count})
 
+
+# =========================
+# WEB delete: ADMIN ONLY
+# =========================
 @login_required
+@require_POST
 def delete_comment(request, comment_id):
-    if request.method != "POST":
-        return HttpResponseForbidden("Invalid request method.")
-    comment = get_object_or_404(Comment, id=comment_id)
-    if not request.user.is_superuser:
+    if not _is_admin(request.user):
         return HttpResponseForbidden("Anda tidak punya izin untuk menghapus komentar ini.")
+
+    comment = get_object_or_404(Comment, id=comment_id)
     post_slug = comment.post.slug
     comment.delete()
     return redirect("forum:post_detail", slug=post_slug)
 
+
 @login_required
+@require_POST
 def delete_post(request, slug):
-    if request.method != "POST":
-        return HttpResponseForbidden("Invalid request")
-    post = get_object_or_404(Post, slug=slug)
-    if not request.user.is_superuser:
+    if not _is_admin(request.user):
         return HttpResponseForbidden("Anda tidak punya izin untuk menghapus post ini.")
+
+    post = get_object_or_404(Post, slug=slug)
     post.delete()
     return redirect("forum:post_list")
 
 
+# =========================
+# JSON / Flutter
+# =========================
 def serialize_post(post):
-    """
-    Ubah 1 objek Post jadi dict JSON untuk dipakai Flutter.
-    Berdasarkan models.Post di models.py.
-    """
-    # tanggal
     created = post.created_at
     if created is not None:
         created_local = timezone.localtime(created)
@@ -202,17 +227,14 @@ def serialize_post(post):
     else:
         date_str = ""
 
-    # kategori
     category_name = post.category.name if post.category_id else ""
-
-    # author_name langsung dari field model
     author_name = post.author_name or ""
 
     return {
         "id": post.pk,
         "slug": post.slug,
         "title": post.title,
-        "content": post.body,          # pakai body sebagai isi
+        "content": post.body,
         "category": category_name,
         "author": author_name,
         "date": date_str,
@@ -220,14 +242,8 @@ def serialize_post(post):
     }
 
 
-
-
 @require_GET
 def api_post_detail(request, slug):
-    """
-    GET /forum/api/posts/<slug>/
-    Mengembalikan detail 1 post + daftar komentar.
-    """
     post = get_object_or_404(
         Post.objects.select_related("category"),
         slug=slug,
@@ -246,44 +262,30 @@ def api_post_detail(request, slug):
         else:
             time_str = ""
 
-        comments_data.append(
-            {
-                "id": c.pk,
-                "author": c.author_name,
-                "content": c.body,
-                "time": time_str,
-            }
-        )
+        comments_data.append({
+            "id": c.pk,
+            "author": c.author_name,
+            "content": c.body,
+            "time": time_str,
+        })
 
-    return JsonResponse(
-        {
-            "post": post_data,
-            "comments": comments_data,
-        }
-    )
+    return JsonResponse({"post": post_data, "comments": comments_data})
 
 
-@csrf_exempt  # untuk awal, biar gampang dites dari Flutter / Postman
+@csrf_exempt
 def api_posts(request):
-    """
-    GET  /forum/api/posts/   -> list semua post (PUBLISHED)
-    POST /forum/api/posts/   -> buat post baru dari Flutter
-    """
-    # GET: kirim list
+    # GET: list
     if request.method == "GET":
         ensure_default_categories()
-
         qs = (
-            Post.objects
-            .select_related("category")
+            Post.objects.select_related("category")
             .filter(status=Post.PUBLISHED)
             .order_by("-created_at")
         )
-
         data = [serialize_post(p) for p in qs]
         return JsonResponse({"results": data})
 
-    # POST: buat post baru
+    # POST: create
     if request.method == "POST":
         try:
             body = json.loads(request.body.decode("utf-8"))
@@ -294,12 +296,11 @@ def api_posts(request):
         content = (body.get("content") or "").strip()
         category_name = (body.get("category") or "").strip()
 
-        # FIX: terima "author" dari Flutter juga
         author_name = (
-            body.get("author") or
-            body.get("author_name") or
-            body.get("username") or
-            ""
+            body.get("author")
+            or body.get("author_name")
+            or body.get("username")
+            or ""
         ).strip()
 
         if not title or not content:
@@ -320,13 +321,13 @@ def api_posts(request):
             title=title,
             body=content,
             category=category,
-            author_name=author_name,   # sekarang kepake bener
+            author_name=author_name,
             status=Post.PUBLISHED,
         )
-
         return JsonResponse(serialize_post(post), status=201)
 
-    
+    return JsonResponse({"error": "Method not allowed"}, status=405)
+
 
 @csrf_exempt
 @login_required
@@ -356,20 +357,28 @@ def api_toggle_like(request, slug):
     return JsonResponse({"liked": liked, "like_count": post.like_count})
 
 
+# =========================
+# API delete: ADMIN ONLY
+# =========================
+@csrf_exempt
 @login_required
 @require_POST
 def api_delete_post(request, slug):
-    if not request.user.is_superuser:
-        return HttpResponseForbidden("Forbidden")
+    if not _is_admin(request.user):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
     post = get_object_or_404(Post, slug=slug)
     post.delete()
     return JsonResponse({"ok": True})
 
+
+@csrf_exempt
 @login_required
 @require_POST
 def api_delete_comment(request, comment_id):
-    if not request.user.is_superuser:
-        return HttpResponseForbidden("Forbidden")
+    if not _is_admin(request.user):
+        return JsonResponse({"error": "Forbidden"}, status=403)
+
     c = get_object_or_404(Comment, id=comment_id)
     c.delete()
     return JsonResponse({"ok": True})
