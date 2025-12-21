@@ -1,6 +1,6 @@
 # accounts/views.py
 from django.contrib import messages
-from django.contrib.auth import authenticate, login as auth_login, get_user_model
+from django.contrib.auth import authenticate, login as auth_login, logout as auth_logout, get_user_model
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.http import JsonResponse
 from django.shortcuts import render, redirect
@@ -36,6 +36,14 @@ def login_mobile(request):
             "is_superuser": user.is_superuser,
         }
     )
+
+@csrf_exempt
+def logout_mobile(request):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+    auth_logout(request)
+    return JsonResponse({"message": "Logout success"})
+
 
 class SimpleSignupForm(UserCreationForm):
     class Meta:
