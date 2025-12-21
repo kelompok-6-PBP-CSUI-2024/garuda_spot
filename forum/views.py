@@ -213,10 +213,6 @@ def _comment_to_dict(comment):
 
 @csrf_exempt
 def api_posts(request):
-    auth_resp = _require_auth_json(request)
-    if auth_resp:
-        return auth_resp
-
     ensure_default_categories()
 
     if request.method == "GET":
@@ -233,9 +229,12 @@ def api_posts(request):
         title = (payload.get("title") or "").strip()
         content = (payload.get("content") or "").strip()
         category_name = (payload.get("category") or "Match").strip()
+        author_name = request.user.username if request.user.is_authenticated else (payload.get("author") or "").strip()
 
         if not title or not content:
             return JsonResponse({"detail": "Title and content are required"}, status=400)
+        if not author_name:
+            author_name = "Guest"
 
         category = Category.objects.filter(name__iexact=category_name).first()
         if category is None:
@@ -245,7 +244,7 @@ def api_posts(request):
 
         post = Post.objects.create(
             title=title,
-            author_name=request.user.username,
+            author_name=author_name,
             category=category,
             body=content,
             status=Post.PUBLISHED,
@@ -257,10 +256,6 @@ def api_posts(request):
 
 @csrf_exempt
 def api_post_detail(request, slug):
-    auth_resp = _require_auth_json(request)
-    if auth_resp:
-        return auth_resp
-
     post = get_object_or_404(
         Post.objects.select_related("category"),
         slug=slug,
@@ -274,10 +269,6 @@ def api_post_detail(request, slug):
 
 @csrf_exempt
 def api_post_like(request, slug):
-    auth_resp = _require_auth_json(request)
-    if auth_resp:
-        return auth_resp
-
     post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
     liked_posts = request.session.get("liked_posts", [])
     if not isinstance(liked_posts, list):
@@ -300,10 +291,6 @@ def api_post_like(request, slug):
 
 @csrf_exempt
 def api_comment_create(request, slug):
-    auth_resp = _require_auth_json(request)
-    if auth_resp:
-        return auth_resp
-
     if request.method != "POST":
         return JsonResponse({"detail": "Method not allowed"}, status=405)
 
@@ -313,13 +300,16 @@ def api_comment_create(request, slug):
         return JsonResponse({"detail": "Invalid JSON"}, status=400)
 
     content = (payload.get("content") or "").strip()
+    author_name = request.user.username if request.user.is_authenticated else (payload.get("author") or "").strip()
     if not content:
         return JsonResponse({"detail": "Content is required"}, status=400)
+    if not author_name:
+        author_name = "Guest"
 
     post = get_object_or_404(Post, slug=slug, status=Post.PUBLISHED)
     comment = Comment.objects.create(
         post=post,
-        author_name=request.user.username,
+        author_name=author_name,
         body=content,
     )
     return JsonResponse(_comment_to_dict(comment), status=201)
