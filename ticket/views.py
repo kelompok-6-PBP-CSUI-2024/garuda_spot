@@ -17,8 +17,15 @@ from .serializers import (
 )
 
 
-def _is_admin_user(request) -> bool:
-    return request.user.is_authenticated and (getattr(request.user, "is_admin", False) or request.user.is_superuser)
+def _is_admin_request(request, payload=None) -> bool:
+    if request.user.is_authenticated:
+        return getattr(request.user, "is_admin", False) or request.user.is_superuser
+    if payload is None:
+        payload = _get_payload(request)
+    if not payload:
+        return False
+    flag = str(payload.get("is_admin", "")).strip().lower()
+    return flag in ("1", "true", "yes")
 
 
 def _get_payload(request):
@@ -42,7 +49,7 @@ def main_view(request):
 
 # ----- Forms (HTML fragments for modals) -----
 def form_match(request, match_uuid=None):
-    if not _is_admin_user(request):
+    if not _is_admin_request(request):
         return HttpResponse("FORBIDDEN", status=403)
     instance = None
     if match_uuid:
@@ -51,7 +58,7 @@ def form_match(request, match_uuid=None):
 
 
 def form_link(request, match_uuid):
-    if not _is_admin_user(request):
+    if not _is_admin_request(request):
         return HttpResponse("FORBIDDEN", status=403)
     match = get_object_or_404(TicketMatch, match_id=match_uuid)
     return render(request, "gen_tick_link.html", {"match": match})
@@ -61,11 +68,11 @@ def form_link(request, match_uuid):
 @csrf_exempt
 @require_POST
 def create_ticket_ajax(request):
-    if not _is_admin_user(request):
-        return HttpResponse(b"FORBIDDEN", status=403)
+    if not _is_admin_request(request):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
     payload = _get_payload(request)
     if payload is None:
-        return HttpResponseBadRequest(b"INVALID_JSON")
+        return JsonResponse({"detail": "INVALID_JSON"}, status=400)
     form = TicketMatchForm(parse_match_payload(payload))
     if form.is_valid():
         match = form.save()
@@ -76,12 +83,12 @@ def create_ticket_ajax(request):
 @csrf_exempt
 @require_POST
 def edit_ticket_ajax(request, id):
-    if not _is_admin_user(request):
-        return HttpResponse(b"FORBIDDEN", status=403)
+    if not _is_admin_request(request):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
     match = get_object_or_404(TicketMatch, match_id=id)
     payload = _get_payload(request)
     if payload is None:
-        return HttpResponseBadRequest(b"INVALID_JSON")
+        return JsonResponse({"detail": "INVALID_JSON"}, status=400)
     form = TicketMatchForm(parse_match_payload(payload), instance=match)
     if form.is_valid():
         updated = form.save()
@@ -92,12 +99,12 @@ def edit_ticket_ajax(request, id):
 @csrf_exempt
 @require_POST
 def create_link_ajax(request, match_uuid):
-    if not _is_admin_user(request):
-        return HttpResponse(b"FORBIDDEN", status=403)
+    if not _is_admin_request(request):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
     match = get_object_or_404(TicketMatch, match_id=match_uuid)
     payload = _get_payload(request)
     if payload is None:
-        return HttpResponseBadRequest(b"INVALID_JSON")
+        return JsonResponse({"detail": "INVALID_JSON"}, status=400)
     form = TicketLinkForm(parse_link_payload(payload))
     if form.is_valid():
         link = form.save(commit=False)
@@ -110,29 +117,29 @@ def create_link_ajax(request, match_uuid):
 # ----- Non-AJAX delete endpoints (redirect back) -----
 @csrf_exempt
 def delete_ticket(request, id):
-    if not _is_admin_user(request):
-        return HttpResponse(b"FORBIDDEN", status=403)
+    if not _is_admin_request(request):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
     # Accept either the UUID-friendly match_id or the integer PK to avoid 404s from mismatched IDs.
     match = (
         TicketMatch.objects.filter(match_id=id).first()
         or TicketMatch.objects.filter(pk=id).first()
     )
     if not match:
-        return HttpResponse(b"NOT_FOUND", status=404)
+        return JsonResponse({"detail": "NOT_FOUND"}, status=404)
     match.delete()
     return JsonResponse({"deleted": str(id)}, status=200)
 
 
 @csrf_exempt
 def delete_link(request, id):
-    if not _is_admin_user(request):
-        return HttpResponse(b"FORBIDDEN", status=403)
+    if not _is_admin_request(request):
+        return JsonResponse({"detail": "Forbidden"}, status=403)
     link = (
         TicketLink.objects.filter(link_id=id).first()
         or TicketLink.objects.filter(pk=id).first()
     )
     if not link:
-        return HttpResponse(b"NOT_FOUND", status=404)
+        return JsonResponse({"detail": "NOT_FOUND"}, status=404)
     link.delete()
     return JsonResponse({"deleted": str(id)}, status=200)
 
