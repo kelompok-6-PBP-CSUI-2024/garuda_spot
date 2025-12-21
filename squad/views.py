@@ -1,12 +1,13 @@
-from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden
+from django.http import JsonResponse, HttpResponseBadRequest, HttpResponseForbidden, Http404
 from django.views.decorators.http import require_http_methods
 from django.views.decorators.csrf import csrf_exempt,ensure_csrf_cookie
-from django.shortcuts import get_object_or_404
+from django.shortcuts import get_object_or_404, render
 from django.contrib.auth.decorators import login_required
 from datetime import date
 import json
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.html import strip_tags
 
 
 from .models import Player, POS_CHOICES
@@ -401,4 +402,3 @@ def api_player_detail(request, pk):
         "assists": p.assists,
     }
     return JsonResponse(data)
-
