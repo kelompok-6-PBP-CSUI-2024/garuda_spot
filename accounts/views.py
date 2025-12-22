@@ -60,3 +60,21 @@ def register_view(request):
     else:
         form = SimpleSignupForm()
     return render(request, "accounts/register.html", {"form": form})
+
+@csrf_exempt
+def register_mobile(request):
+    if request.method != "POST":
+        return JsonResponse({"detail": "Method not allowed"}, status=405)
+
+    form = SimpleSignupForm(request.POST)
+    if not form.is_valid():
+        return JsonResponse({"errors": form.errors}, status=400)
+
+    user = form.save()
+    return JsonResponse(
+        {
+            "message": "Register success",
+            "username": user.username,
+        },
+        status=201,
+    )
